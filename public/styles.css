@@ -1,0 +1,104 @@
+/* =============================================
+   Bcrypt-Guard Calibrator — Web App Styles
+   Dark theme + Glassmorphism
+   ============================================= */
+
+:root {
+    --bg-primary: #0a0a1a;
+    --bg-secondary: #0f1025;
+    --glass-bg: rgba(15, 18, 45, 0.65);
+    --glass-border: rgba(100, 120, 255, 0.15);
+    
+    --text-primary: #e2e8f0;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+
+    --accent-cyan: #00f0ff;
+    --accent-purple: #8b5cf6;
+    --accent-green: #10b981;
+    --accent-yellow: #fbbf24;
+    --accent-red: #ef4444;
+
+    --gradient-primary: linear-gradient(135deg, #00f0ff 0%, #8b5cf6 50%, #ec4899 100%);
+    --gradient-btn: linear-gradient(135deg, #00f0ff 0%, #8b5cf6 100%);
+    --gradient-danger: linear-gradient(135deg, #ef4444 0%, #ec4899 100%);
+
+    --font-main: 'Inter', sans-serif;
+    --font-mono: 'Fira Code', monospace;
+    --radius-md: 12px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-main); background: var(--bg-primary); color: var(--text-primary); line-height: 1.6; min-height: 100vh; }
+
+/* ── Background ── */
+.background-glow {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background: radial-gradient(ellipse 600px 400px at 20% 20%, rgba(0,240,255,0.06) 0%, transparent 70%);
+}
+.grid-overlay {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background-image: linear-gradient(rgba(100,120,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(100,120,255,0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+}
+
+/* ── Navbar ── */
+.navbar {
+    position: sticky; top: 0; z-index: 100; display: flex; justify-content: space-between; padding: 16px 32px;
+    background: rgba(10,10,26,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid var(--glass-border);
+}
+.nav-brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.25rem; }
+.brand-text { background: var(--gradient-primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.brand-badge { font-size: 0.65rem; padding: 3px 8px; border-radius: 20px; background: rgba(0,240,255,0.12); color: var(--accent-cyan); border: 1px solid rgba(0,240,255,0.25); text-transform: uppercase; }
+
+/* ── Common ── */
+.main-container { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; padding: 32px 20px; }
+.glass-card { background: var(--glass-bg); backdrop-filter: blur(16px); border: 1px solid var(--glass-border); border-radius: var(--radius-md); padding: 24px; margin-bottom: 24px; }
+.card-header h2 { font-size: 1.2rem; font-weight: 600; margin-bottom: 8px; }
+.card-header p { color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 20px; }
+
+/* ── Buttons ── */
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: var(--radius-md); font-weight: 600; font-size: 0.9rem; cursor: pointer; border: none; transition: 0.2s; color: #fff; }
+.btn-primary { background: var(--gradient-btn); box-shadow: 0 4px 15px rgba(0,240,255,0.2); }
+.btn-danger { background: var(--gradient-danger); }
+.btn:hover { transform: translateY(-1px); opacity: 0.9; }
+
+/* ── System Info ── */
+.system-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+.sys-item { background: rgba(0,0,0,0.3); padding: 12px 16px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); }
+.sys-label { font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 4px; text-transform: uppercase; }
+.sys-value { font-size: 0.95rem; font-weight: 600; color: var(--accent-cyan); }
+.sys-sub { font-size: 0.75rem; color: var(--text-secondary); display: block; margin-top: 2px; }
+
+/* ── Benchmark Controls ── */
+.benchmark-controls { display: flex; gap: 24px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 24px; }
+.control-group label { display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px; }
+.value-display { background: rgba(0,0,0,0.4); padding: 10px 16px; border-radius: 8px; font-weight: 600; font-family: var(--font-mono); border: 1px solid var(--glass-border); color: var(--text-primary); }
+
+/* ── Progress ── */
+.progress-area { background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px; border: 1px solid rgba(0,240,255,0.2); }
+.progress-header { display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 12px; font-weight: 500; }
+.progress-bar-container { height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; margin-bottom: 12px; }
+.progress-bar-fill { height: 100%; width: 0%; background: var(--gradient-primary); transition: width 0.3s ease; }
+.current-test-info { font-family: var(--font-mono); font-size: 0.85rem; color: var(--accent-yellow); }
+
+/* ── Recommendation ── */
+.recommendation-card { border-color: rgba(16,185,129,0.3); background: rgba(16, 185, 129, 0.05); }
+.rec-grid { display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 20px; }
+.rec-main { flex: 0 0 200px; text-align: center; padding: 20px; background: rgba(0,0,0,0.3); border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); }
+.rec-label { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px; }
+.rec-cost-value { font-size: 4rem; font-weight: 800; line-height: 1; color: var(--accent-green); margin-bottom: 12px; text-shadow: 0 0 20px rgba(16,185,129,0.4); }
+.rec-security-badge { font-size: 0.75rem; padding: 4px 8px; border-radius: 4px; background: rgba(16,185,129,0.2); font-weight: 600; }
+.rec-details { flex: 1; min-width: 250px; display: flex; flex-direction: column; gap: 12px; justify-content: center; }
+.rec-detail-item { display: flex; justify-content: space-between; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.9rem; }
+.rd-value { font-weight: 600; font-family: var(--font-mono); color: var(--accent-cyan); }
+.rec-reasoning { background: rgba(0,0,0,0.2); padding: 16px; border-radius: 8px; font-size: 0.85rem; }
+.rec-reason-item { margin-bottom: 6px; }
+
+/* ── Charts ── */
+.charts-section { display: grid; gap: 24px; }
+.chart-card h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 4px; }
+.chart-desc { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 16px; }
+.chart-container { position: relative; height: 300px; width: 100%; }
+
+.footer { text-align: center; padding: 24px; font-size: 0.8rem; color: var(--text-muted); border-top: 1px solid rgba(255,255,255,0.05); margin-top: 40px; }

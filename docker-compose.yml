@@ -1,0 +1,17 @@
+services:
+  calibrator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bcrypt_calibrator
+    restart: unless-stopped
+    ports:
+      - "${PORT:-4000}:${PORT:-4000}"
+    environment:
+      - PORT=${PORT:-4000}
+      - BENCHMARK_MIN_COST=${BENCHMARK_MIN_COST:-4}
+      - BENCHMARK_MAX_COST=${BENCHMARK_MAX_COST:-14}
+      - BENCHMARK_SAMPLES=${BENCHMARK_SAMPLES:-5}
+      - TARGET_LATENCY_MS=${TARGET_LATENCY_MS:-250}
+    env_file:
+      - .env

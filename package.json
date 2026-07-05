@@ -1,0 +1,14 @@
+{
+  "name": "bcrypt-guard-calibrator",
+  "version": "1.0.0",
+  "description": "Bcrypt-Guard Adaptive Calibrator — Benchmark & Cost Recommendation Engine",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "express": "^4.21.0"
+  }
+}

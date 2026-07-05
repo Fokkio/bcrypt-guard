@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bcrypt-Guard — Adaptive Calibrator</title>
+    <meta name="description" content="Benchmark and calibrate the optimal bcrypt work factor for your hardware.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="background-glow"></div>
+    <div class="grid-overlay"></div>
+
+    <!-- ═══════════════ NAVBAR ═══════════════ -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-brand">
+            <span class="brand-icon">⚡</span>
+            <span class="brand-text">Bcrypt-Guard</span>
+            <span class="brand-badge">Calibrator</span>
+        </div>
+        <div class="nav-right">
+            <a href="/api/system-info" target="_blank" class="btn-link">System API</a>
+        </div>
+    </nav>
+
+    <main class="main-container">
+        
+        <!-- ═══════════════ SYSTEM INFO ═══════════════ -->
+        <section class="system-card glass-card">
+            <div class="card-header">
+                <h2>🖥️ ข้อมูลฮาร์ดแวร์ (Hardware Specs)</h2>
+            </div>
+            <div class="system-grid" id="system-info-grid">
+                <div class="sys-item loading-pulse">กำลังตรวจสอบสเปกเครื่อง...</div>
+            </div>
+        </section>
+
+        <!-- ═══════════════ BENCHMARK CONTROLS ═══════════════ -->
+        <section class="benchmark-card glass-card">
+            <div class="card-header">
+                <h2>📊 Benchmark & Calibration</h2>
+                <p>ทดสอบความเร็วในการเข้ารหัสรหัสผ่านเพื่อหาค่า Cost (Work Factor) ที่เหมาะสมที่สุด</p>
+            </div>
+            
+            <div class="benchmark-controls">
+                <div class="control-group">
+                    <label>เป้าหมายความหน่วง (Target Latency)</label>
+                    <div class="value-display" id="target-latency-display">250 ms</div>
+                </div>
+                <div class="control-group">
+                    <label>ช่วงการทดสอบ (Cost Range)</label>
+                    <div class="value-display">4 ถึง 14</div>
+                </div>
+                <div class="control-actions">
+                    <button class="btn btn-primary" id="btn-start-benchmark">
+                        <span class="btn-text">🚀 เริ่ม Benchmark</span>
+                    </button>
+                    <button class="btn btn-danger" id="btn-stop-benchmark" style="display: none;">
+                        <span class="btn-text">🛑 หยุดการทดสอบ</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Progress Area -->
+            <div class="progress-area" id="progress-area" style="display: none;">
+                <div class="progress-header">
+                    <span id="progress-status-text">กำลังเริ่มต้น...</span>
+                    <span id="progress-percent">0%</span>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar-fill" id="progress-bar-fill"></div>
+                </div>
+                <div class="current-test-info" id="current-test-info">
+                    รอข้อมูล...
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══════════════ RECOMMENDATION RESULT ═══════════════ -->
+        <section class="recommendation-card glass-card" id="recommendation-card" style="display: none;">
+            <div class="card-header">
+                <h2>🎯 ผลการประเมินและคำแนะนำ (Calibration Result)</h2>
+            </div>
+            <div class="rec-grid">
+                <div class="rec-main">
+                    <h3 class="rec-label">Cost ที่แนะนำ</h3>
+                    <div class="rec-cost-value" id="rec-cost-val">-</div>
+                    <div class="rec-security-badge" id="rec-security-badge">-</div>
+                </div>
+                <div class="rec-details">
+                    <div class="rec-detail-item">
+                        <span class="rd-label">เวลาประมวลผลต่อ 1 Hash (Latency):</span>
+                        <span class="rd-value" id="rec-latency-val">-</span>
+                    </div>
+                    <div class="rec-detail-item">
+                        <span class="rd-label">จำนวนรอบที่ทำงาน (Iterations):</span>
+                        <span class="rd-value" id="rec-iter-val">-</span>
+                    </div>
+                    <div class="rec-detail-item">
+                        <span class="rd-label">รองรับ Login สูงสุด (Throughput):</span>
+                        <span class="rd-value" id="rec-throughput-val">-</span>
+                    </div>
+                    <div class="rec-detail-item">
+                        <span class="rd-label">ความเสี่ยงเมื่อถูกโจมตี (DoS Risk):</span>
+                        <span class="rd-value" id="rec-dos-val">-</span>
+                    </div>
+                </div>
+            </div>
+            <div class="rec-reasoning" id="rec-reasoning-list">
+                <!-- Injected via JS -->
+            </div>
+        </section>
+
+        <!-- ═══════════════ CHARTS ═══════════════ -->
+        <section class="charts-section" id="charts-section" style="display: none;">
+            <div class="chart-card glass-card">
+                <h3>⏱️ Latency vs Cost Factor</h3>
+                <p class="chart-desc">แสดงการเพิ่มขึ้นของเวลาประมวลผลแบบทวีคูณ (Exponential)</p>
+                <div class="chart-container">
+                    <canvas id="latencyChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="chart-card glass-card">
+                <h3>🔄 Throughput (Logins per Second)</h3>
+                <p class="chart-desc">แสดงความสามารถในการรับโหลด (ยิ่ง Cost สูง ยิ่งรองรับได้น้อยลง)</p>
+                <div class="chart-container">
+                    <canvas id="throughputChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="footer">
+        <p>⚡ Bcrypt-Guard Adaptive Calibrator · Research Pillar 1</p>
+    </footer>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
