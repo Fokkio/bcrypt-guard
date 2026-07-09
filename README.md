@@ -1,4 +1,4 @@
-﻿<div align="center">
+<div align="center">
 
 # Bcrypt-Guard Adaptive Calibrator
 
@@ -25,7 +25,7 @@
 | Deployment | Docker, docker-compose |
 | Real-time | Server-Sent Events (SSE) |
 | ค่าเริ่มต้น | Cost `4-14`, Samples `5`, Target latency `250ms` |
-| Security floor | บังคับค่าแนะนำไม่ต่ำกว่า `cost 10` |
+| Can recommend below cost 10 when necessary | Older hardware gets the highest viable cost plus an upgrade warning |
 | Port | `4000` |
 
 > **แนวคิดหลัก:** ค่า bcrypt cost ไม่ควรเดาจากตัวเลขกลาง ๆ เพียงอย่างเดียว เพราะ CPU แต่ละเครื่องแรงไม่เท่ากัน โปรเจกต์นี้จึงวัดจากเครื่องจริง แล้วค่อยแนะนำค่าที่เหมาะสม
@@ -69,7 +69,7 @@
 - Server รองรับ request login พร้อมกันได้น้อยลง
 - เสี่ยงถูกโจมตีแบบ Denial of Service เพราะแต่ละ login ใช้ CPU สูง
 
-**Bcrypt-Guard** จึงใช้วิธี benchmark บน hardware จริง แล้วคำนวณค่า cost ที่เหมาะสมตาม latency เป้าหมายและ minimum security floor
+**Bcrypt-Guard** จึงใช้วิธี benchmark บน hardware จริง แล้วคำนวณค่า cost ที่เหมาะสมตาม latency เป้าหมายและ OWASP security baseline
 
 ---
 
@@ -81,7 +81,7 @@
 | Real-time Monitoring | แสดง CPU/RAM usage แบบ real-time ผ่าน SSE |
 | bcrypt Benchmark | ทดสอบ bcrypt hash จริงตามช่วง cost ที่กำหนด |
 | Live Progress | ส่ง progress ระหว่าง benchmark ผ่าน Server-Sent Events |
-| Smart Calibration | แนะนำ cost จาก median latency, target latency และ OWASP floor |
+| Smart Calibration | Recommends the highest viable cost for the target latency and warns if it is below OWASP baseline |
 | DoS Risk Label | ประเมินความเสี่ยงจาก throughput ของ cost ที่แนะนำ |
 | Charts | แสดงกราฟ Latency vs Cost และ Throughput vs Cost |
 | Export JSON | ดาวน์โหลดผล benchmark ล่าสุดเป็น JSON |
@@ -270,7 +270,6 @@ TARGET_LATENCY_MS=250
 Validation สำคัญ:
 
 - Cost range ต้องอยู่ในช่วง `4-20`
-- Cost range ต้องครอบคลุม `cost 10`
 - Target latency ต้องอยู่ในช่วง `50-2000 ms`
 
 ---
@@ -382,16 +381,16 @@ bcrypt-benchmark-results.json
 
 ## Recommendation Algorithm
 
-ระบบเลือก cost ที่แนะนำจากข้อมูล benchmark จริง โดยใช้ logic นี้:
+The system recommends a cost value from real benchmark data using this flow:
 
-1. เรียงผล benchmark จาก cost ต่ำไปสูง
-2. หา cost สูงสุดที่ `median latency <= target latency`
-3. ตั้งค่า minimum security floor เป็น `cost 10`
-4. เลือก `recommendedCost = max(maxSafeCost, 10)`
-5. ตรวจสอบว่า recommended cost อยู่ในช่วงที่ benchmark จริง
-6. ถ้า recommended cost เกิน target latency ให้แสดง performance warning แต่ยังคงแนะนำ cost 10 หากเป็น minimum security floor
+1. Sort benchmark results from the lowest cost to the highest cost.
+2. Find the highest cost where `median latency <= target latency`.
+3. Use `cost 10` as the OWASP security baseline for warnings.
+4. Recommend `maxSafeCost`; if no tested cost meets the target, recommend the lowest tested cost as a fallback.
+5. If the recommended cost is below 10, show an upgrade warning for old or underpowered server specs.
+6. If the recommended cost still exceeds the target latency, show an additional performance warning.
 
-### Example 1: เครื่องแรงพอ
+### Example 1: Hardware can meet the baseline
 
 ```text
 target latency = 250 ms
@@ -405,7 +404,7 @@ maxSafeCost     = 10
 recommendedCost = 10
 ```
 
-### Example 2: เครื่องช้ากว่าเป้าหมาย
+### Example 2: Hardware cannot meet cost 10 within the target
 
 ```text
 target latency = 100 ms
@@ -415,10 +414,10 @@ cost 9  = 90 ms
 cost 10 = 180 ms
 
 maxSafeCost     = 9
-recommendedCost = 10
+recommendedCost = 9
 ```
 
-ในกรณีนี้ระบบยังแนะนำ `cost 10` เพราะเป็น minimum security floor แต่จะแสดง warning ว่า latency เกินเป้าหมาย
+In this case, the system recommends `cost 9` because it is the highest viable value for the configured latency target. It still warns that the value is below the OWASP baseline and that the server specs should be upgraded to support cost 10 or higher.
 
 ---
 
@@ -482,7 +481,7 @@ throughput = 1000 / medianLatencyMs
 | Benchmark ขึ้นกับโหลดเครื่อง | ถ้าเครื่องกำลังทำงานหนัก latency จะสูงกว่าปกติ |
 | CPU usage เป็น sampling | ค่า CPU เป็นค่าประมาณจาก CPU times ไม่ใช่ monitoring suite เต็มรูปแบบ |
 | Throughput เป็นค่าประมาณ | คำนวณจาก single hash latency ไม่ใช่ concurrent load test จริง |
-| ใช้ cost 10 เป็น floor | ระบบไม่แนะนำต่ำกว่า cost 10 แม้ target latency จะต่ำกว่านั้น |
+| Can recommend below cost 10 when necessary | Older hardware gets the highest viable cost plus an upgrade warning |
 | ไม่ใช่ security audit ทั้งระบบ | เครื่องมือนี้ช่วยเลือก bcrypt cost ไม่ได้ตรวจ password policy หรือ auth flow ทั้งหมด |
 
 ---
@@ -525,26 +524,11 @@ bcrypt เป็น native dependency ถ้าติดตั้ง local แ�
 
 ### benchmark ใช้เวลานาน
 
-ค่า cost สูงทำให้ workload เพิ่มแบบ exponential ถ้าเครื่องช้าให้ลด `BENCHMARK_MAX_COST` แต่ต้องให้ช่วงทดสอบครอบคลุม `cost 10`
+High cost values increase CPU work exponentially. If the machine is slow, reduce `BENCHMARK_MAX_COST`; the system will warn when the recommended value is below `cost 10`.
 
-### ระบบแจ้งว่า Cost range ต้องครอบคลุม Cost 10
+### Recommended cost is below 10
 
-เพราะระบบใช้ `cost 10` เป็น OWASP minimum floor
-
-ตัวอย่างช่วงที่ใช้ได้:
-
-```text
-4-14
-8-12
-10-14
-```
-
-ตัวอย่างช่วงที่ใช้ไม่ได้:
-
-```text
-4-9
-11-14
-```
+This means the current hardware or target latency cannot comfortably support the OWASP baseline of `cost 10`. The system chooses the highest viable cost and warns that the server specs should be upgraded before production use.
 
 ---
 

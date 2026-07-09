@@ -256,10 +256,17 @@
         const cal = data.calibration;
         const targetLatency = parseInt($('#input-target-latency').value) || 250;
 
-        // Target Exceeded Warning
+        // Safety / performance warning
         const warningBox = $('#target-warning-box');
+        const warnings = [];
+        if (cal.belowOwaspMinimum) {
+            warnings.push(`Recommended Cost ${cal.recommendedCost} is the highest viable value for this hardware and target latency, but it is below the OWASP minimum (Cost 10). Upgrade the server specs so production can safely use Cost 10 or higher.`);
+        }
         if (cal.exceedsTarget) {
-            $('#target-warning-text').textContent = `เวลาที่ใช้จริงคือ ${cal.latency?.toFixed(2)} ms ซึ่งเกินเป้าหมาย ${targetLatency} ms ที่คุณตั้งไว้ แต่ระบบจำเป็นต้องแนะนำ Cost ${cal.recommendedCost} เนื่องจากเป็นค่าต่ำสุดที่ผ่านเกณฑ์ความปลอดภัยของ OWASP (แนะนำให้อัปเกรดเซิร์ฟเวอร์)`;
+            warnings.push(`Actual latency is ${cal.latency?.toFixed(2)} ms, which exceeds the configured target of ${targetLatency} ms.`);
+        }
+        if (warnings.length > 0) {
+            $('#target-warning-text').textContent = warnings.join(' ');
             warningBox.style.display = 'flex';
         } else {
             warningBox.style.display = 'none';

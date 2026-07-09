@@ -241,11 +241,14 @@ function calibrate(benchmarks, targetLatency = TARGET_LATENCY) {
         return { error: 'No benchmark data' };
     }
 
-    // Find the highest cost where median latency ≤ target
-    let recommendedCost = MIN_COST;
-    let maxSafeCost = MIN_COST;
+    const sortedBenchmarks = [...benchmarks].sort((a, b) => a.cost - b.cost);
 
-    for (const b of benchmarks) {
+    // Find the highest cost where median latency <= target. On slow hardware,
+    // this can be below the OWASP minimum; we still recommend the best viable
+    // value and surface a clear upgrade warning instead of forcing cost 10.
+    let maxSafeCost = null;
+
+    for (const b of sortedBenchmarks) {
         if (b.median <= targetLatency) {
             maxSafeCost = b.cost;
         } else {
@@ -255,42 +258,29 @@ function calibrate(benchmarks, targetLatency = TARGET_LATENCY) {
         }
     }
 
-    // OWASP minimum is cost 10
     const owaspMinimum = 10;
-    recommendedCost = Math.max(maxSafeCost, owaspMinimum);
-
-    // Make sure recommendedCost was actually benchmarked before we rely on its data
+    const recommendedCost = maxSafeCost ?? sortedBenchmarks[0].cost;
     const recResult = benchmarks.find(b => b.cost === recommendedCost);
-    if (!recResult) {
-        const tested = benchmarks.map(b => b.cost);
-        return {
-            error: `แนะนำ cost ${recommendedCost} แต่ไม่ได้อยู่ในช่วงที่ทดสอบ (${Math.min(...tested)}–${Math.max(...tested)}) กรุณารัน benchmark ให้ครอบคลุมถึง cost ${recommendedCost} ด้วย`,
-            recommendedCost,
-            testedRange: { min: Math.min(...tested), max: Math.max(...tested) },
-        };
-    }
-
     const recLatency = recResult.median;
     const recThroughput = recResult.throughput;
-
-    // Whether the recommended (OWASP-floor-enforced) cost exceeds the target latency
+    const belowOwaspMinimum = recommendedCost < owaspMinimum;
     const exceedsTarget = recLatency > targetLatency;
 
     // Security rating
     let securityRating, securityLabel;
-    if (recommendedCost <= 11) {
+    if (belowOwaspMinimum) {
+        securityRating = 'WEAK';
+        securityLabel = 'Warning: below OWASP - upgrade server';
+    } else if (recommendedCost <= 11) {
         securityRating = 'GOOD';
-        securityLabel = '✅ ดี — ผ่านมาตรฐาน OWASP';
+        securityLabel = 'Good - meets OWASP baseline';
     } else if (recommendedCost <= 13) {
         securityRating = 'STRONG';
-        securityLabel = '🛡️ แข็งแกร่ง — เหนือมาตรฐาน';
+        securityLabel = 'Strong - above baseline';
     } else {
         securityRating = 'EXTREME';
-        securityLabel = '🔒 แข็งแกร่งมาก — ระดับสูงสุด';
+        securityLabel = 'Extreme - highest range';
     }
-    // Note: recommendedCost is always >= owaspMinimum (10) by construction,
-    // so a 'WEAK' (<10) rating can never actually occur — the OWASP floor
-    // is enforced above.
 
     // DoS risk assessment
     let dosRisk, dosLabel;
@@ -324,17 +314,18 @@ function calibrate(benchmarks, targetLatency = TARGET_LATENCY) {
         targetLatency,
         owaspMinimum,
         maxSafeCost,
+        belowOwaspMinimum,
         exceedsTarget,
         securityRating,
         securityLabel,
         dosRisk,
         dosLabel,
         scalingData,
-        reasoning: generateReasoning(recommendedCost, recLatency, recThroughput, maxSafeCost, exceedsTarget, targetLatency),
+        reasoning: generateReasoning(recommendedCost, recLatency, recThroughput, maxSafeCost, exceedsTarget, belowOwaspMinimum, targetLatency),
     };
 }
 
-function generateReasoning(cost, latency, throughput, maxSafe, exceeds, targetLatency = TARGET_LATENCY) {
+function generateReasoning(cost, latency, throughput, maxSafe, exceeds, belowOwaspMinimum, targetLatency = TARGET_LATENCY) {
     const lines = [];
 
     lines.push(`🎯 Cost ที่แนะนำ: ${cost}`);
@@ -342,12 +333,13 @@ function generateReasoning(cost, latency, throughput, maxSafe, exceeds, targetLa
     lines.push(`🔄 Throughput: ${throughput?.toFixed(2) || '?'} hashes/sec`);
     lines.push(`🔐 Iterations: ${Math.pow(2, cost).toLocaleString()} รอบ`);
 
-    if (exceeds) {
-        lines.push(`⚠️ แม้ cost ${cost} จะเกินเป้าหมาย ${targetLatency}ms แต่เป็นค่าต่ำสุดที่ OWASP ยอมรับ`);
+    if (belowOwaspMinimum) {
+        lines.push(`Warning: Cost ${cost} is below OWASP minimum (cost 10), but it is the highest viable cost for this hardware and target latency.`);
+        lines.push('Upgrade the server specs so production can safely support cost 10 or higher.');
     }
 
-    if (maxSafe < 10) {
-        lines.push(`💡 ฮาร์ดแวร์นี้ช้าเกินไปสำหรับ OWASP minimum (cost 10) — ควรอัปเกรด server`);
+    if (exceeds) {
+        lines.push(`Warning: even cost ${cost} exceeds the target latency of ${targetLatency}ms.`);
     }
 
     return lines;
