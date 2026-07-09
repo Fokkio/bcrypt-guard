@@ -18,30 +18,43 @@
 ## 🌟 ฟีเจอร์หลัก (Features)
 
 - 🖥️ **System Detection:** ตรวจสอบสเปกเซิร์ฟเวอร์ (CPU, RAM, Cores) อัตโนมัติ
-- ⚡ **Real-time Benchmark:** ทดสอบความเร็วในการเข้ารหัสแบบเรียลไทม์ พร้อมแถบแสดงความคืบหน้า (Progress Bar)
-- 📊 **Visualized Results:** แสดงผลกราฟ Chart.js (Latency vs Cost, Throughput)
+- ⚡ **Real-time Benchmark:** ทดสอบความเร็วในการเข้ารหัสแบบเรียลไทม์ พร้อมแถบแสดงความคืบหน้า (Progress Bar) ด้วยระบบ Server-Sent Events (SSE)
+- 📊 **Visualized Results:** แสดงผลกราฟ Chart.js (Latency vs Cost, Throughput) อย่างสวยงามและเข้าใจง่าย
 - 🎯 **Smart Calibration:** วิเคราะห์และแนะนำค่า Cost ที่สมดุลที่สุด พร้อมประเมินความเสี่ยงต่อการถูกโจมตีแบบ DoS
+- 🌓 **Minimal UI & Theme Toggle:** ดีไซน์หน้าเว็บแบบ Clean & Minimal รองรับการสลับโหมด Light / Dark Theme อัตโนมัติ
+- 🔒 **100% Offline / Air-gapped Support:** โค้ดทั้งหมดรวมถึงไลบรารีกราฟ (Chart.js) ถูกบรรจุไว้ภายในตัวคอนเทนเนอร์ สามารถรันในระบบปิดที่ไม่มีอินเทอร์เน็ตได้อย่างสมบูรณ์แบบ
+
+---
+
+## 🧮 ทฤษฎีการคำนวณค่า Cost ของ Bcrypt
+
+ค่า Cost ของ Bcrypt ทำงานอยู่บนคณิตศาสตร์แบบ **ลอการิทึมฐาน 2 (Base-2 Logarithmic)** ซึ่งกำหนดจำนวนรอบการทำงานของ CPU:
+
+> **จำนวนรอบ = 2<sup>Cost</sup>**
+*   **Cost 10:** 1,024 รอบ (มาตรฐานขั้นต่ำ OWASP)
+*   **Cost 11:** 2,048 รอบ
+*   **Cost 12:** 4,096 รอบ
+
+*จำนวนรอบที่เพิ่มขึ้นทวีคูณ ส่งผลให้ระยะเวลาประมวลผลเพิ่มขึ้นเป็น 2 เท่าเสมอเมื่อขยับค่า Cost ขึ้น 1 สเต็ป*
+เนื่องจากความแรงของ CPU แต่ละเครื่องไม่เท่ากัน จึงไม่สามารถมีสูตรคำนวณเวลาล่วงหน้าที่แม่นยำได้ นี่คือเหตุผลที่ระบบ **Benchmark ฮาร์ดแวร์จริง** แบบโปรเจกต์นี้มีความสำคัญอย่างยิ่ง
 
 ---
 
 ## 📋 สิ่งที่ต้องมี (Prerequisites)
 
 - [**Docker**](https://www.docker.com/products/docker-desktop/) และ **Docker Compose**
-> *หมายเหตุ: โปรเจคนี้รันผ่าน Docker ทั้งหมด จึงไม่จำเป็นต้องติดตั้ง Node.js หรือซอฟต์แวร์อื่นๆ ลงบนเครื่องโดยตรง*
+> *หมายเหตุ: โปรเจกต์นี้รันผ่าน Docker ทั้งหมด จึงไม่จำเป็นต้องติดตั้ง Node.js หรือซอฟต์แวร์อื่นๆ ลงบนเครื่องโดยตรง*
 
 ---
 
 ## 🚀 วิธีการติดตั้งและรัน (How to Build & Run)
 
-1. **โคลนโปรเจค / เปิด Terminal** 
-   ให้เข้าไปที่โฟลเดอร์ของโปรเจคนี้
-
+1. **เปิด Terminal** ไปที่โฟลเดอร์ของโปรเจกต์นี้
 2. **สั่ง Build และ Run Docker Container**
    ```bash
    docker compose up --build -d
    ```
-
-3. **การเข้าใช้งาน**
+3. **เข้าใช้งาน**
    เปิดเบราว์เซอร์ไปที่:
    ```
    http://localhost:4000
@@ -57,11 +70,13 @@
 ├── docker-compose.yml          # การตั้งค่าคอนเทนเนอร์และพอร์ต
 ├── .env                        # ตัวแปรสภาพแวดล้อม (PORT, Target Latency)
 ├── package.json                # Dependencies (bcrypt, express)
-├── server.js                   # Benchmark Engine (API & Server-Sent Events)
-└── public/                     
+├── src/                        # 📁 โฟลเดอร์เก็บโค้ด Backend
+│   └── server.js               # Benchmark Engine (API & SSE)
+└── public/                     # 📁 โฟลเดอร์เก็บโค้ด Frontend (UI)
     ├── index.html              # หน้า Dashboard
-    ├── styles.css              # Dark theme styling
-    └── app.js                  # Frontend logic & Chart.js rendering
+    ├── styles.css              # Minimal clean styling (Light/Dark mode)
+    ├── app.js                  # Frontend logic & Chart.js rendering
+    └── chart.min.js            # ไลบรารี Chart.js สำหรับการใช้งานแบบ Offline
 ```
 
 ---

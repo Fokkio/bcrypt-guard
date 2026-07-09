@@ -20,7 +20,7 @@ COPY --from=builder /app/node_modules ./node_modules
 
 # Copy source code
 COPY package.json ./
-COPY server.js ./
+COPY src/ ./src/
 COPY public/ ./public/
 
 # Default port (overridable via .env / docker-compose)
@@ -32,4 +32,7 @@ EXPOSE ${PORT}
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
     CMD wget -qO- http://localhost:${PORT}/api/system-info || exit 1
 
-CMD ["node", "server.js"]
+# Run as non-root user for security
+USER node
+
+CMD ["node", "src/server.js"]

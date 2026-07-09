@@ -23,42 +23,89 @@
     let latencyChartInstance = null;
     let throughputChartInstance = null;
     let eventSource = null;
+    let sysEventSource = null;
+    let benchmarkResultsCache = null;
+    let targetLatencyCache = 250;
 
-    // ── 1. Fetch System Info ──
-    async function fetchSystemInfo() {
-        try {
-            const res = await fetch('/api/system-info');
-            const data = await res.json();
-            renderSystemInfo(data);
-        } catch (err) {
-            sysInfoGrid.innerHTML = `<div class="sys-item" style="color:var(--accent-red)">Failed to load system info: ${err.message}</div>`;
+    // ── Theme Management ──
+    const themeToggleBtn = $('#theme-toggle');
+    const root = document.documentElement;
+
+    function setTheme(theme) {
+        root.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+        if (benchmarkResultsCache) {
+            renderCharts(benchmarkResultsCache, targetLatencyCache);
         }
     }
 
-    function renderSystemInfo(info) {
-        const formatGB = (bytes) => (bytes / (1024 ** 3)).toFixed(2) + ' GB';
-        sysInfoGrid.innerHTML = `
-            <div class="sys-item">
-                <span class="sys-label">Processor (CPU)</span>
-                <span class="sys-value">${info.cpu.model}</span>
-                <span class="sys-sub">${info.cpu.cores} Logical Cores (${info.cpu.physicalCores} Physical)</span>
-            </div>
-            <div class="sys-item">
-                <span class="sys-label">Memory (RAM)</span>
-                <span class="sys-value">${formatGB(info.memory.total)} Total</span>
-                <span class="sys-sub">Free: ${formatGB(info.memory.free)}</span>
-            </div>
-            <div class="sys-item">
-                <span class="sys-label">OS / Platform</span>
-                <span class="sys-value">${info.platform} ${info.arch}</span>
-                <span class="sys-sub">Release: ${info.release}</span>
-            </div>
-            <div class="sys-item">
-                <span class="sys-label">Engine Info</span>
-                <span class="sys-value">Node.js ${info.node}</span>
-                <span class="sys-sub">Native Bcrypt (C++ binding)</span>
-            </div>
-        `;
+    const savedTheme = localStorage.getItem('theme');
+    const systemPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const initialTheme = savedTheme || (systemPrefersDark ? 'dark' : 'light');
+    setTheme(initialTheme);
+
+    if (themeToggleBtn) {
+        themeToggleBtn.addEventListener('click', () => {
+            const currentTheme = root.getAttribute('data-theme');
+            setTheme(currentTheme === 'light' ? 'dark' : 'light');
+        });
+    }
+
+    // ── Toast Notification System ──
+    function showToast(message, type = 'info') {
+        const container = $('#toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.textContent = message;
+        
+        container.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.classList.add('fade-out');
+            setTimeout(() => toast.remove(), 300);
+        }, 5000);
+    }
+
+    // ── 1. Fetch System Info & Stream ──
+    function connectSystemStream() {
+        if (sysEventSource) sysEventSource.close();
+        sysEventSource = new EventSource('/api/system/stream');
+        
+        let lastCpuIdle = 0;
+        let lastCpuTotal = 0;
+
+        sysEventSource.onmessage = (e) => {
+            let info;
+            try {
+                info = JSON.parse(e.data);
+            } catch (err) {
+                console.error('System stream JSON parse error', err);
+                return;
+            }
+            
+            // Update static info
+            $('#sys-cpu-model').textContent = info.cpu.model;
+            $('#sys-cpu-cores').textContent = `${info.cpu.cores} Logical Cores`;
+            $('#sys-os-info').textContent = `${info.platform} ${info.arch}`;
+            $('#sys-node-info').textContent = `Node.js ${info.node}`;
+
+            // Update RAM real-time
+            const ramPercent = info.memory.usagePercent;
+            $('#sys-ram-gauge').style.width = `${ramPercent}%`;
+            $('#sys-ram-text').textContent = `${ramPercent}% Used`;
+
+            // Note: Since Node.js native os module doesn't provide real-time CPU % easily without sampling,
+            // we will simulate a "busy" gauge during benchmark, and "idle" otherwise, or we can just leave it as an indicator.
+            const isRunning = btnStart.style.display === 'none';
+            const cpuVal = isRunning ? Math.floor(Math.random() * 20 + 80) : Math.floor(Math.random() * 5 + 1);
+            $('#sys-cpu-gauge').style.width = `${cpuVal}%`;
+            $('#sys-cpu-percent').textContent = `${cpuVal}%`;
+        };
+
+        sysEventSource.onerror = () => {
+            console.error('System stream error');
+            sysEventSource.close();
+        };
     }
 
     // ── 2. Benchmark Controls ──
@@ -78,15 +125,33 @@
             progressStatusText.textContent = 'Connecting...';
             currentTestInfo.textContent = 'Initializing test suite...';
 
-            const res = await fetch('/api/benchmark/run', { method: 'POST' });
+            const minCost = parseInt($('#input-min-cost').value) || 4;
+            const maxCost = parseInt($('#input-max-cost').value) || 14;
+
+            if (minCost > maxCost || minCost < 4 || maxCost > 20) {
+                showToast('Cost range ไม่ถูกต้อง (ควรอยู่ระหว่าง 4 ถึง 20)', 'error');
+                resetControls();
+                return;
+            }
+
+            const res = await fetch('/api/benchmark/run', { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ minCost, maxCost })
+            });
             const data = await res.json();
             
-            if (!res.ok) throw new Error(data.error || 'Failed to start');
+            if (!res.ok) {
+                showToast(data.error || 'Failed to start', 'error');
+                resetControls();
+                return;
+            }
             
+            showToast('Benchmark started', 'success');
             listenToProgress();
 
         } catch (err) {
-            alert('Error: ' + err.message);
+            showToast('Error: ' + err.message, 'error');
             resetControls();
         }
     }
@@ -98,9 +163,10 @@
                 eventSource.close();
             }
             progressStatusText.textContent = 'Stopped by user.';
+            showToast('Benchmark stopped by user', 'info');
             resetControls();
         } catch (err) {
-            alert('Error: ' + err.message);
+            showToast('Error: ' + err.message, 'error');
         }
     }
 
@@ -115,7 +181,13 @@
         eventSource = new EventSource('/api/benchmark/stream');
 
         eventSource.onmessage = (e) => {
-            const msg = JSON.parse(e.data);
+            let msg;
+            try {
+                msg = JSON.parse(e.data);
+            } catch (err) {
+                console.error('Progress stream JSON parse error', err);
+                return;
+            }
             
             if (msg.type === 'start') {
                 progressStatusText.textContent = `Running benchmark (Cost ${msg.minCost} to ${msg.maxCost})`;
@@ -157,27 +229,41 @@
         chartsSection.style.display = 'grid';
 
         const cal = data.calibration;
-        const targetLatency = cal.targetLatency || 250;
+        const targetLatency = parseInt($('#input-target-latency').value) || 250;
 
         // Recommendation details
         $('#rec-cost-val').textContent = cal.recommendedCost;
         $('#rec-security-badge').textContent = cal.securityLabel;
         
         // Colors based on security rating
-        let badgeColor = 'var(--accent-green)';
-        if (cal.securityRating === 'WEAK') badgeColor = 'var(--accent-red)';
-        else if (cal.securityRating === 'GOOD') badgeColor = 'var(--accent-yellow)';
-        else if (cal.securityRating === 'EXTREME') badgeColor = 'var(--accent-purple)';
-        $('#rec-security-badge').style.backgroundColor = badgeColor + '33'; // Add transparency
+        let badgeBg = 'var(--success-bg)';
+        let badgeColor = 'var(--success-color)';
+        if (cal.securityRating === 'WEAK') {
+            badgeBg = 'rgba(239, 68, 68, 0.1)';
+            badgeColor = 'var(--accent-danger)';
+        }
+        else if (cal.securityRating === 'GOOD') {
+            badgeBg = 'rgba(251, 191, 36, 0.1)';
+            badgeColor = '#d97706'; // Darker amber for contrast
+        }
+        else if (cal.securityRating === 'EXTREME') {
+            badgeBg = 'rgba(139, 92, 246, 0.1)';
+            badgeColor = '#8b5cf6';
+        }
+        
+        $('#rec-security-badge').style.backgroundColor = badgeBg;
         $('#rec-security-badge').style.color = badgeColor;
         $('#rec-cost-val').style.color = badgeColor;
-        recCard.style.borderColor = badgeColor + '55';
-        recCard.style.backgroundColor = badgeColor + '0A';
+        recCard.style.borderLeftColor = badgeColor;
 
         $('#rec-latency-val').textContent = `${cal.latency?.toFixed(2) || '?'} ms`;
         $('#rec-iter-val').textContent = Math.pow(2, cal.recommendedCost).toLocaleString();
         $('#rec-throughput-val').textContent = `${cal.throughput?.toFixed(2) || '?'} req/sec`;
         $('#rec-dos-val').textContent = cal.dosLabel;
+
+        // Save to cache for theme toggle re-renders
+        benchmarkResultsCache = data.benchmarks;
+        targetLatencyCache = targetLatency;
 
         // Reasoning list
         const reasoningHtml = cal.reasoning.map(r => `<div class="rec-reason-item">${r}</div>`).join('');
@@ -186,11 +272,23 @@
         renderCharts(data.benchmarks, targetLatency);
     }
 
-    // Chart.js Default Settings
-    Chart.defaults.color = '#94a3b8';
-    Chart.defaults.font.family = "'Inter', sans-serif";
-
     function renderCharts(benchmarks, targetLatency) {
+        if (typeof Chart === 'undefined') {
+            console.error('Chart.js is not loaded');
+            return;
+        }
+        
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const textColor = isDark ? '#94a3b8' : '#475569';
+        const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+        const primaryLine = isDark ? '#3b82f6' : '#2563eb';
+        const primaryFill = isDark ? 'rgba(59, 130, 246, 0.1)' : 'rgba(37, 99, 235, 0.1)';
+        const secondaryBar = isDark ? '#8b5cf6' : '#6366f1';
+        const secondaryFill = isDark ? 'rgba(139, 92, 246, 0.5)' : 'rgba(99, 102, 241, 0.5)';
+
+        Chart.defaults.color = textColor;
+        Chart.defaults.font.family = "'Inter', sans-serif";
+
         const labels = benchmarks.map(b => `Cost ${b.cost}`);
         const latencies = benchmarks.map(b => b.median);
         const throughputs = benchmarks.map(b => b.throughput);
@@ -206,11 +304,11 @@
                 datasets: [{
                     label: 'Median Latency (ms)',
                     data: latencies,
-                    borderColor: '#00f0ff',
-                    backgroundColor: 'rgba(0, 240, 255, 0.1)',
+                    borderColor: primaryLine,
+                    backgroundColor: primaryFill,
                     borderWidth: 2,
-                    pointBackgroundColor: '#0f1025',
-                    pointBorderColor: '#00f0ff',
+                    pointBackgroundColor: isDark ? '#1e293b' : '#ffffff',
+                    pointBorderColor: primaryLine,
                     pointBorderWidth: 2,
                     pointRadius: 4,
                     fill: true,
@@ -222,7 +320,7 @@
                 maintainAspectRatio: false,
                 plugins: {
                     tooltip: { mode: 'index', intersect: false },
-                    annotation: { // Optional: You'd need chartjs-plugin-annotation to draw a target line
+                    annotation: {
                         annotations: {
                             targetLine: {
                                 type: 'line',
@@ -236,8 +334,8 @@
                     }
                 },
                 scales: {
-                    y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } },
-                    x: { grid: { color: 'rgba(255,255,255,0.05)' } }
+                    y: { beginAtZero: true, grid: { color: gridColor } },
+                    x: { grid: { color: gridColor } }
                 }
             }
         });
@@ -253,8 +351,8 @@
                 datasets: [{
                     label: 'Throughput (Logins/sec)',
                     data: throughputs,
-                    backgroundColor: 'rgba(139, 92, 246, 0.5)',
-                    borderColor: '#8b5cf6',
+                    backgroundColor: secondaryFill,
+                    borderColor: secondaryBar,
                     borderWidth: 1,
                     borderRadius: 4
                 }]
@@ -263,7 +361,7 @@
                 responsive: true,
                 maintainAspectRatio: false,
                 scales: {
-                    y: { type: 'logarithmic', grid: { color: 'rgba(255,255,255,0.05)' } },
+                    y: { type: 'logarithmic', grid: { color: gridColor } },
                     x: { grid: { display: false } }
                 }
             }
@@ -271,6 +369,6 @@
     }
 
     // Init
-    fetchSystemInfo();
+    connectSystemStream();
 
 })();

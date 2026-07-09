@@ -11,8 +11,9 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="background-glow"></div>
-    <div class="grid-overlay"></div>
+
+    <!-- ═══════════════ TOAST CONTAINER ═══════════════ -->
+    <div id="toast-container" class="toast-container"></div>
 
     <!-- ═══════════════ NAVBAR ═══════════════ -->
     <nav class="navbar" id="navbar">
@@ -23,6 +24,10 @@
         </div>
         <div class="nav-right">
             <a href="/api/system-info" target="_blank" class="btn-link">System API</a>
+            <button id="theme-toggle" class="theme-toggle-btn" aria-label="Toggle theme">
+                <svg class="theme-icon-light" xmlns="http://www.3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+                <svg class="theme-icon-dark" xmlns="http://www.3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+            </button>
         </div>
     </nav>
 
@@ -34,7 +39,33 @@
                 <h2>🖥️ ข้อมูลฮาร์ดแวร์ (Hardware Specs)</h2>
             </div>
             <div class="system-grid" id="system-info-grid">
-                <div class="sys-item loading-pulse">กำลังตรวจสอบสเปกเครื่อง...</div>
+                <!-- Static System Info -->
+                <div class="sys-item">
+                    <span class="sys-label">Processor (CPU)</span>
+                    <span class="sys-value" id="sys-cpu-model">Loading...</span>
+                    <span class="sys-sub" id="sys-cpu-cores">...</span>
+                </div>
+                <div class="sys-item">
+                    <span class="sys-label">OS / Platform</span>
+                    <span class="sys-value" id="sys-os-info">Loading...</span>
+                    <span class="sys-sub" id="sys-node-info">...</span>
+                </div>
+                <!-- Real-time CPU -->
+                <div class="sys-item sys-realtime">
+                    <span class="sys-label">CPU Usage (Real-time)</span>
+                    <div class="sys-gauge-container">
+                        <div class="sys-gauge-fill" id="sys-cpu-gauge" style="width: 0%"></div>
+                    </div>
+                    <span class="sys-sub" id="sys-cpu-percent">0%</span>
+                </div>
+                <!-- Real-time RAM -->
+                <div class="sys-item sys-realtime">
+                    <span class="sys-label">RAM Usage (Real-time)</span>
+                    <div class="sys-gauge-container">
+                        <div class="sys-gauge-fill" id="sys-ram-gauge" style="width: 0%"></div>
+                    </div>
+                    <span class="sys-sub" id="sys-ram-text">Loading...</span>
+                </div>
             </div>
         </section>
 
@@ -47,12 +78,16 @@
             
             <div class="benchmark-controls">
                 <div class="control-group">
-                    <label>เป้าหมายความหน่วง (Target Latency)</label>
-                    <div class="value-display" id="target-latency-display">250 ms</div>
+                    <label for="input-target-latency">เป้าหมายความหน่วง (Target Latency, ms)</label>
+                    <input type="number" id="input-target-latency" class="input-modern" value="250" min="50" max="2000" step="10">
                 </div>
                 <div class="control-group">
-                    <label>ช่วงการทดสอบ (Cost Range)</label>
-                    <div class="value-display">4 ถึง 14</div>
+                    <label for="input-min-cost">Cost ต่ำสุด</label>
+                    <input type="number" id="input-min-cost" class="input-modern" value="4" min="4" max="19">
+                </div>
+                <div class="control-group">
+                    <label for="input-max-cost">Cost สูงสุด</label>
+                    <input type="number" id="input-max-cost" class="input-modern" value="14" min="5" max="20">
                 </div>
                 <div class="control-actions">
                     <button class="btn btn-primary" id="btn-start-benchmark">
@@ -140,7 +175,7 @@
     </footer>
 
     <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="chart.min.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

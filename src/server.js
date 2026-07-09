@@ -3,10 +3,13 @@
 // Benchmark Engine + API Server
 // =============================================
 
+require('dotenv').config();
 const express = require('express');
 const bcrypt = require('bcrypt');
 const os = require('os');
 const path = require('path');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 const PORT = parseInt(process.env.PORT) || 4000;
@@ -15,8 +18,20 @@ const MAX_COST = parseInt(process.env.BENCHMARK_MAX_COST) || 14;
 const SAMPLES = parseInt(process.env.BENCHMARK_SAMPLES) || 5;
 const TARGET_LATENCY = parseInt(process.env.TARGET_LATENCY_MS) || 250;
 
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
+            styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+            fontSrc: ["'self'", "https://fonts.gstatic.com"],
+            connectSrc: ["'self'"],
+            imgSrc: ["'self'", "data:"]
+        }
+    }
+}));
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, '../public')));
 
 // ── State ──
 let benchmarkState = {
@@ -25,10 +40,23 @@ let benchmarkState = {
     currentCost: 0,
     results: null,
     error: null,
+    timeoutId: null,
 };
 
-// SSE clients
+// SSE clients for benchmark
 let sseClients = [];
+
+// SSE clients for real-time system stats
+let sysSseClients = [];
+
+// Start background interval for system stats
+setInterval(() => {
+    if (sysSseClients.length > 0) {
+        const info = getSystemInfo();
+        const payload = `data: ${JSON.stringify(info)}\n\n`;
+        sysSseClients.forEach(client => client.write(payload));
+    }
+}, 1000);
 
 // =============================================
 // System Information
@@ -115,6 +143,17 @@ async function runFullBenchmark(minCost, maxCost) {
     benchmarkState.progress = 0;
     benchmarkState.results = null;
     benchmarkState.error = null;
+    if (benchmarkState.timeoutId) clearTimeout(benchmarkState.timeoutId);
+
+    // Auto-unlock after 5 minutes if something hangs
+    benchmarkState.timeoutId = setTimeout(() => {
+        if (benchmarkState.running) {
+            console.warn('Benchmark auto-unlocked due to 5-minute timeout');
+            benchmarkState.running = false;
+            benchmarkState.error = 'Timeout: การทดสอบใช้เวลานานเกิน 5 นาที ระบบจึงยกเลิกอัตโนมัติ';
+            sendSSE({ type: 'error', error: benchmarkState.error });
+        }
+    }, 5 * 60 * 1000);
 
     const results = [];
     const totalSteps = maxCost - minCost + 1;
@@ -145,6 +184,10 @@ async function runFullBenchmark(minCost, maxCost) {
     benchmarkState.progress = 100;
     benchmarkState.running = false;
     benchmarkState.results = results;
+    if (benchmarkState.timeoutId) {
+        clearTimeout(benchmarkState.timeoutId);
+        benchmarkState.timeoutId = null;
+    }
 
     // Auto-calibrate
     const calibration = calibrate(results);
@@ -298,8 +341,33 @@ app.get('/api/system-info', (req, res) => {
     res.json(getSystemInfo());
 });
 
+// ── System Info Stream (SSE) ──
+app.get('/api/system/stream', (req, res) => {
+    res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'X-Accel-Buffering': 'no',
+    });
+    
+    // Initial data
+    res.write(`data: ${JSON.stringify(getSystemInfo())}\n\n`);
+    sysSseClients.push(res);
+
+    req.on('close', () => {
+        sysSseClients = sysSseClients.filter(c => c !== res);
+    });
+});
+
+// ── Benchmark Rate Limiter ──
+const benchmarkLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5, // limit each IP to 5 requests per windowMs
+    message: { error: 'คุณรัน Benchmark บ่อยเกินไป (สูงสุด 5 ครั้งต่อ 15 นาที) กรุณารอสักครู่แล้วลองใหม่' }
+});
+
 // ── Start Benchmark ──
-app.post('/api/benchmark/run', (req, res) => {
+app.post('/api/benchmark/run', benchmarkLimiter, (req, res) => {
     if (benchmarkState.running) {
         return res.status(409).json({ error: 'Benchmark กำลังรันอยู่แล้ว' });
     }
@@ -318,6 +386,7 @@ app.post('/api/benchmark/run', (req, res) => {
         console.error('Benchmark failed:', err);
         benchmarkState.running = false;
         benchmarkState.error = err.message;
+        if (benchmarkState.timeoutId) clearTimeout(benchmarkState.timeoutId);
         sendSSE({ type: 'error', error: err.message });
     });
 });
@@ -328,6 +397,10 @@ app.post('/api/benchmark/stop', (req, res) => {
         return res.status(400).json({ error: 'ไม่มี benchmark ที่กำลังรัน' });
     }
     benchmarkState.running = false;
+    if (benchmarkState.timeoutId) {
+        clearTimeout(benchmarkState.timeoutId);
+        benchmarkState.timeoutId = null;
+    }
     res.json({ message: 'กำลังหยุด benchmark...' });
 });
 
