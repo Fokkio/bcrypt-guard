@@ -119,6 +119,16 @@
             <div class="card-header">
                 <h2>🎯 ผลการประเมินและคำแนะนำ (Calibration Result)</h2>
             </div>
+
+            <!-- Target Exceeded Warning -->
+            <div id="target-warning-box" style="display: none; background-color: rgba(239, 68, 68, 0.15); color: #ef4444; padding: 1rem; border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.5); margin-bottom: 1.5rem; align-items: flex-start; gap: 0.75rem;">
+                <span style="font-size: 1.25rem;">⚠️</span>
+                <div>
+                    <strong style="display: block; margin-bottom: 0.25rem;">ฮาร์ดแวร์ประสิทธิภาพไม่ถึงเป้าหมาย (Performance Warning)</strong>
+                    <span id="target-warning-text"></span>
+                </div>
+            </div>
+
             <div class="rec-grid">
                 <div class="rec-main">
                     <h3 class="rec-label">Cost ที่แนะนำ</h3>

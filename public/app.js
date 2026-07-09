@@ -112,6 +112,28 @@
     btnStart.addEventListener('click', startBenchmark);
     btnStop.addEventListener('click', stopBenchmark);
 
+    $('#input-target-latency').addEventListener('change', async (e) => {
+        if (!benchmarkResultsCache) return; // Only recalibrate if we already ran a benchmark
+        
+        const targetLatency = parseInt(e.target.value) || 250;
+        try {
+            const res = await fetch('/api/calibrate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ targetLatency })
+            });
+            if (res.ok) {
+                const cal = await res.json();
+                showResults({
+                    calibration: cal,
+                    benchmarks: benchmarkResultsCache
+                });
+            }
+        } catch(err) {
+            console.error('Recalibration failed', err);
+        }
+    });
+
     async function startBenchmark() {
         try {
             // Reset UI
@@ -127,6 +149,7 @@
 
             const minCost = parseInt($('#input-min-cost').value) || 4;
             const maxCost = parseInt($('#input-max-cost').value) || 14;
+            const targetLatency = parseInt($('#input-target-latency').value) || 250;
 
             if (minCost > maxCost || minCost < 4 || maxCost > 20) {
                 showToast('Cost range ไม่ถูกต้อง (ควรอยู่ระหว่าง 4 ถึง 20)', 'error');
@@ -137,7 +160,7 @@
             const res = await fetch('/api/benchmark/run', { 
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ minCost, maxCost })
+                body: JSON.stringify({ minCost, maxCost, targetLatency })
             });
             const data = await res.json();
             
@@ -230,6 +253,15 @@
 
         const cal = data.calibration;
         const targetLatency = parseInt($('#input-target-latency').value) || 250;
+
+        // Target Exceeded Warning
+        const warningBox = $('#target-warning-box');
+        if (cal.exceedsTarget) {
+            $('#target-warning-text').textContent = `เวลาที่ใช้จริงคือ ${cal.latency?.toFixed(2)} ms ซึ่งเกินเป้าหมาย ${targetLatency} ms ที่คุณตั้งไว้ แต่ระบบจำเป็นต้องแนะนำ Cost ${cal.recommendedCost} เนื่องจากเป็นค่าต่ำสุดที่ผ่านเกณฑ์ความปลอดภัยของ OWASP (แนะนำให้อัปเกรดเซิร์ฟเวอร์)`;
+            warningBox.style.display = 'flex';
+        } else {
+            warningBox.style.display = 'none';
+        }
 
         // Recommendation details
         $('#rec-cost-val').textContent = cal.recommendedCost;

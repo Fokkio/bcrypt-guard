@@ -138,7 +138,7 @@ async function runSingleBenchmark(cost) {
     };
 }
 
-async function runFullBenchmark(minCost, maxCost) {
+async function runFullBenchmark(minCost, maxCost, targetLatency = TARGET_LATENCY) {
     benchmarkState.running = true;
     benchmarkState.progress = 0;
     benchmarkState.results = null;
@@ -190,11 +190,11 @@ async function runFullBenchmark(minCost, maxCost) {
     }
 
     // Auto-calibrate
-    const calibration = calibrate(results);
+    const calibration = calibrate(results, targetLatency);
 
     const fullResults = {
         system: getSystemInfo(),
-        config: { minCost, maxCost, samples: SAMPLES, targetLatency: TARGET_LATENCY },
+        config: { minCost, maxCost, samples: SAMPLES, targetLatency },
         benchmarks: results,
         calibration,
         timestamp: new Date().toISOString(),
@@ -210,18 +210,22 @@ async function runFullBenchmark(minCost, maxCost) {
 // Calibration Algorithm
 // =============================================
 
-function calibrate(benchmarks) {
+function calibrate(benchmarks, targetLatency = TARGET_LATENCY) {
     if (!benchmarks || benchmarks.length === 0) {
         return { error: 'No benchmark data' };
     }
 
-    // Find the highest cost where median latency ≤ target (250ms)
+    // Find the highest cost where median latency ≤ target
     let recommendedCost = MIN_COST;
     let maxSafeCost = MIN_COST;
 
     for (const b of benchmarks) {
-        if (b.median <= TARGET_LATENCY) {
+        if (b.median <= targetLatency) {
             maxSafeCost = b.cost;
+        } else {
+            // Latency grows exponentially with cost, so once we cross the
+            // target we don't expect any higher cost to come back under it.
+            break;
         }
     }
 
@@ -229,27 +233,26 @@ function calibrate(benchmarks) {
     const owaspMinimum = 10;
     recommendedCost = Math.max(maxSafeCost, owaspMinimum);
 
-    // If even cost 10 exceeds target, still recommend 10 but warn
-    const cost10Result = benchmarks.find(b => b.cost === 10);
-    const cost10Latency = cost10Result ? cost10Result.median : null;
-    const exceedsTarget = cost10Latency && cost10Latency > TARGET_LATENCY;
-
-    // If recommended cost exceeds target, clamp to maxSafeCost but not below OWASP
-    if (recommendedCost > maxSafeCost && maxSafeCost >= owaspMinimum) {
-        recommendedCost = maxSafeCost;
+    // Make sure recommendedCost was actually benchmarked before we rely on its data
+    const recResult = benchmarks.find(b => b.cost === recommendedCost);
+    if (!recResult) {
+        const tested = benchmarks.map(b => b.cost);
+        return {
+            error: `แนะนำ cost ${recommendedCost} แต่ไม่ได้อยู่ในช่วงที่ทดสอบ (${Math.min(...tested)}–${Math.max(...tested)}) กรุณารัน benchmark ให้ครอบคลุมถึง cost ${recommendedCost} ด้วย`,
+            recommendedCost,
+            testedRange: { min: Math.min(...tested), max: Math.max(...tested) },
+        };
     }
 
-    // Get the result for recommended cost
-    const recResult = benchmarks.find(b => b.cost === recommendedCost);
-    const recLatency = recResult ? recResult.median : null;
-    const recThroughput = recResult ? recResult.throughput : null;
+    const recLatency = recResult.median;
+    const recThroughput = recResult.throughput;
+
+    // Whether the recommended (OWASP-floor-enforced) cost exceeds the target latency
+    const exceedsTarget = recLatency > targetLatency;
 
     // Security rating
     let securityRating, securityLabel;
-    if (recommendedCost < 10) {
-        securityRating = 'WEAK';
-        securityLabel = '⚠️ อ่อน — ต่ำกว่ามาตรฐาน OWASP';
-    } else if (recommendedCost <= 11) {
+    if (recommendedCost <= 11) {
         securityRating = 'GOOD';
         securityLabel = '✅ ดี — ผ่านมาตรฐาน OWASP';
     } else if (recommendedCost <= 13) {
@@ -259,6 +262,9 @@ function calibrate(benchmarks) {
         securityRating = 'EXTREME';
         securityLabel = '🔒 แข็งแกร่งมาก — ระดับสูงสุด';
     }
+    // Note: recommendedCost is always >= owaspMinimum (10) by construction,
+    // so a 'WEAK' (<10) rating can never actually occur — the OWASP floor
+    // is enforced above.
 
     // DoS risk assessment
     let dosRisk, dosLabel;
@@ -289,7 +295,7 @@ function calibrate(benchmarks) {
         recommendedCost,
         latency: recLatency,
         throughput: recThroughput,
-        targetLatency: TARGET_LATENCY,
+        targetLatency,
         owaspMinimum,
         maxSafeCost,
         exceedsTarget,
@@ -298,20 +304,20 @@ function calibrate(benchmarks) {
         dosRisk,
         dosLabel,
         scalingData,
-        reasoning: generateReasoning(recommendedCost, recLatency, recThroughput, maxSafeCost, exceedsTarget),
+        reasoning: generateReasoning(recommendedCost, recLatency, recThroughput, maxSafeCost, exceedsTarget, targetLatency),
     };
 }
 
-function generateReasoning(cost, latency, throughput, maxSafe, exceeds) {
+function generateReasoning(cost, latency, throughput, maxSafe, exceeds, targetLatency = TARGET_LATENCY) {
     const lines = [];
 
     lines.push(`🎯 Cost ที่แนะนำ: ${cost}`);
-    lines.push(`⏱️ Latency: ${latency?.toFixed(2) || '?'} ms (เป้าหมาย ≤ ${TARGET_LATENCY} ms)`);
+    lines.push(`⏱️ Latency: ${latency?.toFixed(2) || '?'} ms (เป้าหมาย ≤ ${targetLatency} ms)`);
     lines.push(`🔄 Throughput: ${throughput?.toFixed(2) || '?'} hashes/sec`);
     lines.push(`🔐 Iterations: ${Math.pow(2, cost).toLocaleString()} รอบ`);
 
     if (exceeds) {
-        lines.push(`⚠️ แม้ cost ${cost} จะเกินเป้าหมาย ${TARGET_LATENCY}ms แต่เป็นค่าต่ำสุดที่ OWASP ยอมรับ`);
+        lines.push(`⚠️ แม้ cost ${cost} จะเกินเป้าหมาย ${targetLatency}ms แต่เป็นค่าต่ำสุดที่ OWASP ยอมรับ`);
     }
 
     if (maxSafe < 10) {
@@ -349,7 +355,7 @@ app.get('/api/system/stream', (req, res) => {
         'Connection': 'keep-alive',
         'X-Accel-Buffering': 'no',
     });
-    
+
     // Initial data
     res.write(`data: ${JSON.stringify(getSystemInfo())}\n\n`);
     sysSseClients.push(res);
@@ -374,15 +380,16 @@ app.post('/api/benchmark/run', benchmarkLimiter, (req, res) => {
 
     const minCost = parseInt(req.body.minCost) || MIN_COST;
     const maxCost = parseInt(req.body.maxCost) || MAX_COST;
+    const targetLatency = parseInt(req.body.targetLatency) || TARGET_LATENCY;
 
     if (minCost < 4 || maxCost > 20 || minCost > maxCost) {
         return res.status(400).json({ error: 'Cost range ไม่ถูกต้อง (4–20)' });
     }
 
-    res.json({ message: 'Benchmark เริ่มแล้ว', minCost, maxCost });
+    res.json({ message: 'Benchmark เริ่มแล้ว', minCost, maxCost, targetLatency });
 
     // Run async
-    runFullBenchmark(minCost, maxCost).catch(err => {
+    runFullBenchmark(minCost, maxCost, targetLatency).catch(err => {
         console.error('Benchmark failed:', err);
         benchmarkState.running = false;
         benchmarkState.error = err.message;
@@ -429,9 +436,7 @@ app.post('/api/calibrate', (req, res) => {
         return res.status(400).json({ error: 'ต้องรัน benchmark ก่อนจึงจะ calibrate ได้' });
     }
     const targetLatency = parseInt(req.body.targetLatency) || TARGET_LATENCY;
-    // Re-run calibration with custom target
-    const original = TARGET_LATENCY;
-    const calibration = calibrate(benchmarkState.results.benchmarks);
+    const calibration = calibrate(benchmarkState.results.benchmarks, targetLatency);
     res.json(calibration);
 });
 
