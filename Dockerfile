@@ -8,7 +8,7 @@ RUN apk add --no-cache python3 make g++
 
 # Copy package files and install
 COPY package.json package-lock.json* ./
-RUN npm install --production
+RUN npm ci --omit=dev
 
 # ── Production Stage ──
 FROM node:20-alpine

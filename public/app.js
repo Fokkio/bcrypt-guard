@@ -11,6 +11,7 @@
     const sysInfoGrid = $('#system-info-grid');
     const btnStart = $('#btn-start-benchmark');
     const btnStop = $('#btn-stop-benchmark');
+    const btnExport = $('#btn-export-results');
     const progressArea = $('#progress-area');
     const progressStatusText = $('#progress-status-text');
     const progressPercent = $('#progress-percent');
@@ -71,9 +72,6 @@
         if (sysEventSource) sysEventSource.close();
         sysEventSource = new EventSource('/api/system/stream');
         
-        let lastCpuIdle = 0;
-        let lastCpuTotal = 0;
-
         sysEventSource.onmessage = (e) => {
             let info;
             try {
@@ -94,12 +92,9 @@
             $('#sys-ram-gauge').style.width = `${ramPercent}%`;
             $('#sys-ram-text').textContent = `${ramPercent}% Used`;
 
-            // Note: Since Node.js native os module doesn't provide real-time CPU % easily without sampling,
-            // we will simulate a "busy" gauge during benchmark, and "idle" otherwise, or we can just leave it as an indicator.
-            const isRunning = btnStart.style.display === 'none';
-            const cpuVal = isRunning ? Math.floor(Math.random() * 20 + 80) : Math.floor(Math.random() * 5 + 1);
+            const cpuVal = Number(info.cpu.usagePercent || 0);
             $('#sys-cpu-gauge').style.width = `${cpuVal}%`;
-            $('#sys-cpu-percent').textContent = `${cpuVal}%`;
+            $('#sys-cpu-percent').textContent = `${cpuVal.toFixed(1)}%`;
         };
 
         sysEventSource.onerror = () => {
@@ -111,6 +106,11 @@
     // ── 2. Benchmark Controls ──
     btnStart.addEventListener('click', startBenchmark);
     btnStop.addEventListener('click', stopBenchmark);
+    if (btnExport) {
+        btnExport.addEventListener('click', () => {
+            window.location.href = '/api/benchmark/export';
+        });
+    }
 
     $('#input-target-latency').addEventListener('change', async (e) => {
         if (!benchmarkResultsCache) return; // Only recalibrate if we already ran a benchmark
@@ -139,6 +139,7 @@
             // Reset UI
             recCard.style.display = 'none';
             chartsSection.style.display = 'none';
+            if (btnExport) btnExport.style.display = 'none';
             progressArea.style.display = 'block';
             btnStart.style.display = 'none';
             btnStop.style.display = 'inline-flex';
@@ -250,6 +251,7 @@
     function showResults(data) {
         recCard.style.display = 'block';
         chartsSection.style.display = 'grid';
+        if (btnExport) btnExport.style.display = 'inline-flex';
 
         const cal = data.calibration;
         const targetLatency = parseInt($('#input-target-latency').value) || 250;
@@ -319,7 +321,7 @@
         const secondaryFill = isDark ? 'rgba(139, 92, 246, 0.5)' : 'rgba(99, 102, 241, 0.5)';
 
         Chart.defaults.color = textColor;
-        Chart.defaults.font.family = "'Inter', sans-serif";
+        Chart.defaults.font.family = "Inter, Segoe UI, Tahoma, sans-serif";
 
         const labels = benchmarks.map(b => `Cost ${b.cost}`);
         const latencies = benchmarks.map(b => b.median);
@@ -345,25 +347,23 @@
                     pointRadius: 4,
                     fill: true,
                     tension: 0.3
+                }, {
+                    label: `Target (${targetLatency}ms)`,
+                    data: labels.map(() => targetLatency),
+                    borderColor: 'rgba(239, 68, 68, 0.75)',
+                    backgroundColor: 'rgba(239, 68, 68, 0)',
+                    borderWidth: 2,
+                    borderDash: [6, 6],
+                    pointRadius: 0,
+                    fill: false,
+                    tension: 0
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    tooltip: { mode: 'index', intersect: false },
-                    annotation: {
-                        annotations: {
-                            targetLine: {
-                                type: 'line',
-                                yMin: targetLatency,
-                                yMax: targetLatency,
-                                borderColor: 'rgba(239, 68, 68, 0.5)',
-                                borderWidth: 2,
-                                borderDash: [5, 5]
-                            }
-                        }
-                    }
+                    tooltip: { mode: 'index', intersect: false }
                 },
                 scales: {
                     y: { beginAtZero: true, grid: { color: gridColor } },

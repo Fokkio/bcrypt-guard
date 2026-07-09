@@ -22,9 +22,9 @@ app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
-            styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-            fontSrc: ["'self'", "https://fonts.gstatic.com"],
+            scriptSrc: ["'self'", "'unsafe-inline'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            fontSrc: ["'self'"],
             connectSrc: ["'self'"],
             imgSrc: ["'self'", "data:"]
         }
@@ -49,6 +49,8 @@ let sseClients = [];
 // SSE clients for real-time system stats
 let sysSseClients = [];
 
+let previousCpuSample = null;
+
 // Start background interval for system stats
 setInterval(() => {
     if (sysSseClients.length > 0) {
@@ -67,6 +69,7 @@ function getSystemInfo() {
     const cpu = cpus[0] || {};
     const totalMem = os.totalmem();
     const freeMem = os.freemem();
+    const cpuUsagePercent = sampleCpuUsage(cpus);
 
     return {
         hostname: os.hostname(),
@@ -79,6 +82,7 @@ function getSystemInfo() {
             speed: cpu.speed || 0,        // MHz
             cores: cpus.length,
             physicalCores: getPhysicalCores(cpus),
+            usagePercent: cpuUsagePercent,
         },
         memory: {
             total: totalMem,
@@ -95,6 +99,28 @@ function getPhysicalCores(cpus) {
     // Estimate: logical / 2 for hyperthreaded CPUs, minimum 1
     const logical = cpus.length;
     return Math.max(1, Math.floor(logical / 2));
+}
+
+function sampleCpuUsage(cpus = os.cpus()) {
+    const totals = cpus.reduce((acc, cpu) => {
+        const times = cpu.times;
+        acc.idle += times.idle;
+        acc.total += times.user + times.nice + times.sys + times.idle + times.irq;
+        return acc;
+    }, { idle: 0, total: 0 });
+
+    if (!previousCpuSample) {
+        previousCpuSample = totals;
+        return 0;
+    }
+
+    const idleDelta = totals.idle - previousCpuSample.idle;
+    const totalDelta = totals.total - previousCpuSample.total;
+    previousCpuSample = totals;
+
+    if (totalDelta <= 0) return 0;
+    const usage = (1 - (idleDelta / totalDelta)) * 100;
+    return Number(Math.max(0, Math.min(100, usage)).toFixed(1));
 }
 
 function formatBytes(bytes) {
