@@ -71,7 +71,7 @@ function setupScan() {
   });
   byId('scan-cancel').addEventListener('click', () => api.cancelScan());
   byId('scan-export').addEventListener('click', async () => {
-    const result = await api.exportReport('scan', lastScan, 'bcrypt-guard-assessment.json');
+    const result = await api.exportReport('scan', 'bcrypt-guard-assessment.json');
     setStatus('scan-status', result.saved ? `Saved ${result.fileName}` : 'Export cancelled.');
   });
 }
@@ -97,7 +97,7 @@ function setupBenchmark() {
   });
   byId('bcrypt-cancel').addEventListener('click', () => api.cancelBenchmark());
   byId('bcrypt-export').addEventListener('click', async () => {
-    const result = await api.exportReport('bcrypt', lastBenchmark, 'bcrypt-guard-benchmark.json');
+    const result = await api.exportReport('bcrypt', 'bcrypt-guard-benchmark.json');
     setStatus('bcrypt-status', result.saved ? `Saved ${result.fileName}` : 'Export cancelled.');
   });
 }

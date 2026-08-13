@@ -4,9 +4,17 @@ const os = require('node:os');
 const path = require('node:path');
 const { benchmarkBcrypt } = require('../src/bcrypt/benchmark');
 const { runScan } = require('../src/scanners/scan-service');
-const { cleanReport } = require('../src/security/report');
 
 const activeOperations = new Map();
+const REPORTS = Symbol('bcryptGuardReports');
+
+function reportsFor(sender) {
+  if (!sender[REPORTS]) {
+    sender[REPORTS] = new Map();
+    sender.once('destroyed', () => sender[REPORTS]?.clear());
+  }
+  return sender[REPORTS];
+}
 
 function validSender(event, allowedOrigin) {
   const frameUrl = event.senderFrame?.url || '';
@@ -47,10 +55,12 @@ function registerIpcHandlers({ allowedOrigin }) {
     const controller = new AbortController();
     activeOperations.set('scan', controller);
     try {
-      return await runScan(config, {
+      const report = await runScan(config, {
         signal: controller.signal,
         onProgress: (progress) => event.sender.send('scan:progress', progress),
       });
+      reportsFor(event.sender).set('scan', report);
+      return report;
     } finally {
       activeOperations.delete('scan');
     }
@@ -67,10 +77,12 @@ function registerIpcHandlers({ allowedOrigin }) {
     const controller = new AbortController();
     activeOperations.set('bcrypt', controller);
     try {
-      return await benchmarkBcrypt(config, {
+      const report = await benchmarkBcrypt(config, {
         signal: controller.signal,
         onProgress: (progress) => event.sender.send('bcrypt:progress', progress),
       });
+      reportsFor(event.sender).set('bcrypt', report);
+      return report;
     } finally {
       activeOperations.delete('bcrypt');
     }
@@ -83,7 +95,9 @@ function registerIpcHandlers({ allowedOrigin }) {
   });
   ipcMain.handle('report:export', async (event, payload) => {
     validSender(event, allowedOrigin);
-    const report = cleanReport(payload?.reportType, payload?.report);
+    if (!['scan', 'bcrypt'].includes(payload?.reportType)) throw new Error('Unknown report type');
+    const report = reportsFor(event.sender).get(payload.reportType);
+    if (!report) throw new Error('No main-owned report is available for export');
     const serialized = JSON.stringify(report, null, 2);
     if (serialized.length > 1024 * 1024) throw new Error('Report exceeds the 1 MB export limit');
     const result = await dialog.showSaveDialog({
