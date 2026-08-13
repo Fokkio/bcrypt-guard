@@ -89,9 +89,9 @@ All heuristic authorization and enumeration results must be labeled
 - Accessibility scan has no critical finding; keyboard and focus checklist is
   manually reviewed.
 - Packaged application launches, loads the local UI, runs bcrypt, and completes
-  a fixture scan without uncaught errors.
+  a loopback fixture scan without uncaught errors. GitHub Actions runs this
+  acceptance against the portable executable after packaging.
 - GitHub Actions Windows build succeeds and publishes both `.exe` artifacts plus
   SHA-256 checksums.
 - The downloaded CI artifact is tested locally before copying to the separate
   delivery folder on `D:\`.
-
