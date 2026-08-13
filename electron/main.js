@@ -9,6 +9,13 @@ const APP_ORIGIN = 'app://local';
 const APP_ID = 'com.fokkio.bcryptguard.desktop';
 const SMOKE_TEST = process.env.BCRYPT_GUARD_SMOKE_TEST === '1';
 const SMOKE_TARGET = process.env.BCRYPT_GUARD_SMOKE_URL;
+const SMOKE_RESULT = process.env.BCRYPT_GUARD_SMOKE_RESULT;
+
+async function finishSmoke(result, exitCode) {
+  if (SMOKE_RESULT) await fs.writeFile(SMOKE_RESULT, JSON.stringify(result), 'utf8');
+  console.log(result.ok ? 'SMOKE_OK' : 'SMOKE_FAILED', JSON.stringify(result));
+  app.exit(exitCode);
+}
 
 protocol.registerSchemesAsPrivileged([{
   scheme: 'app',
@@ -81,11 +88,9 @@ function createWindow() {
         if (renderer.title !== 'Bcrypt Guard Desktop' || renderer.bridge !== 'object' || !renderer.info?.version || benchmark.results.length !== 1 || (SMOKE_TARGET && !scan?.findings.length)) {
           throw new Error('Smoke result did not meet acceptance criteria');
         }
-        console.log('SMOKE_OK', JSON.stringify({ renderer, bcryptP95Ms: benchmark.results[0].p95Ms, scanFindings: scan?.findings.length ?? 0 }));
-        app.exit(0);
+        await finishSmoke({ ok: true, renderer, bcryptP95Ms: benchmark.results[0].p95Ms, scanFindings: scan?.findings.length ?? 0 }, 0);
       } catch (error) {
-        console.error('SMOKE_FAILED', error.message);
-        app.exit(1);
+        await finishSmoke({ ok: false, error: error.message }, 1);
       }
     });
   }
