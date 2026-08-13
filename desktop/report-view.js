@@ -7,17 +7,23 @@ function element(tag, className, text) {
 
 function metric(label, count) {
   const item = element('span');
-  item.append(element('strong', '', String(count)), document.createTextNode(label));
+  item.append(element('strong', '', String(count)), element('span', '', label.trim()));
   return item;
+}
+
+function detail(label, value) {
+  const row = element('p', 'finding-detail');
+  row.append(element('strong', '', label), element('span', '', value));
+  return row;
 }
 
 export function renderScanReport(container, report) {
   container.replaceChildren();
   const summary = element('div', 'summary-strip');
   summary.append(
-    metric(' high', report.summary.high), metric(' medium', report.summary.medium),
-    metric(' low', report.summary.low), metric(' information', report.summary.info),
-    metric(' checks', report.checksRun.length),
+    metric('high', report.summary.high), metric('medium', report.summary.medium),
+    metric('low', report.summary.low), metric('information', report.summary.info),
+    metric('checks', report.checksRun.length),
   );
   container.append(summary);
   if (!report.findings.length) {
@@ -28,10 +34,10 @@ export function renderScanReport(container, report) {
     const article = element('article', `finding ${item.severity}`);
     const header = element('div', 'finding-head');
     const titleGroup = element('div');
-    titleGroup.append(element('h3', '', item.title), element('span', '', `${item.category} · ${item.status} · confidence ${item.confidence}`));
+    titleGroup.append(element('h3', '', item.title), element('span', 'finding-meta', `${item.category} · ${item.status} · confidence ${item.confidence}`));
     header.append(titleGroup, element('span', `badge ${item.severity}`, item.severity));
-    article.append(header, element('p', '', `Endpoint: ${item.endpoint}`),
-      element('p', '', `Evidence: ${item.evidence}`), element('p', '', `Remediation: ${item.remediation}`));
+    article.append(header, detail('Endpoint', item.endpoint),
+      detail('Evidence', item.evidence), detail('Remediation', item.remediation));
     container.append(article);
   }
 }
@@ -40,9 +46,9 @@ export function renderBenchmark(container, report) {
   container.replaceChildren();
   const recommendation = report.recommendation;
   const summary = element('div', 'summary-strip');
-  summary.append(metric(' recommended cost', recommendation.cost),
-    metric(' ms measured p95', recommendation.measuredP95Ms),
-    metric(' ms target', recommendation.targetLatencyMs));
+  summary.append(metric('recommended cost', recommendation.cost),
+    metric('ms measured p95', recommendation.measuredP95Ms),
+    metric('ms target', recommendation.targetLatencyMs));
   container.append(summary);
   if (recommendation.belowBcryptMinimum || recommendation.exceedsTarget) {
     container.append(element('div', 'callout', recommendation.note));

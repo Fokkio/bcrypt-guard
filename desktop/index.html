@@ -12,125 +12,168 @@
   <div class="app-shell">
     <aside class="sidebar" aria-label="Primary navigation">
       <div class="brand">
-        <span class="brand-mark" aria-hidden="true">BG</span>
-        <div><strong>Bcrypt Guard</strong><small>Desktop assessment</small></div>
+        <span class="brand-mark" aria-hidden="true"><span>B</span><span>G</span></span>
+        <div class="brand-copy"><strong>Bcrypt Guard</strong><small>Security workstation</small></div>
       </div>
-      <nav class="nav-list">
-        <button class="nav-item is-active" type="button" data-view="scan">Website assessment</button>
-        <button class="nav-item" type="button" data-view="bcrypt">Bcrypt calibration</button>
-        <button class="nav-item" type="button" data-view="guardrails">Scope &amp; guardrails</button>
+
+      <div class="nav-heading">Workspaces</div>
+      <nav class="nav-list" aria-label="Application workspaces">
+        <button class="nav-item is-active" type="button" data-view="scan" aria-current="page">
+          <span class="nav-index" aria-hidden="true">01</span>
+          <span class="nav-copy"><strong>Website assessment</strong><small>Bounded evidence checks</small></span>
+        </button>
+        <button class="nav-item" type="button" data-view="bcrypt">
+          <span class="nav-index" aria-hidden="true">02</span>
+          <span class="nav-copy"><strong>Bcrypt calibration</strong><small>Local CPU measurement</small></span>
+        </button>
+        <button class="nav-item" type="button" data-view="guardrails">
+          <span class="nav-index" aria-hidden="true">03</span>
+          <span class="nav-copy"><strong>Scope &amp; guardrails</strong><small>Know the boundaries</small></span>
+        </button>
       </nav>
+
+      <div class="trust-note">
+        <span class="trust-dot" aria-hidden="true"></span>
+        <div><strong>Local processing</strong><small>Target pages are never rendered. Reports exclude supplied secrets.</small></div>
+      </div>
       <div class="build-meta"><span id="app-version">Version …</span><span id="build-mode">Checking build</span></div>
     </aside>
 
     <main id="main" class="workspace" tabindex="-1">
       <section class="view" data-panel="scan" aria-labelledby="scan-title">
         <header class="page-header">
-          <p class="eyebrow">READ-ONLY / AUTHORIZED</p>
-          <h1 id="scan-title">Website assessment</h1>
-          <p>Capture bounded evidence for access-control and response-policy review. This is not an exploit scanner.</p>
+          <div class="page-heading">
+            <p class="eyebrow"><span>01</span> Authorized assessment</p>
+            <h1 id="scan-title">Review access.<br>Keep control.</h1>
+            <p>Collect focused evidence for access-control and response-policy review without turning the desktop into an exploitation framework.</p>
+          </div>
+          <div class="context-stamp" aria-label="Assessment operating boundaries">
+            <span>Operating mode</span>
+            <strong>Read-only</strong>
+            <small>GET · HEAD · OPTIONS</small>
+          </div>
         </header>
+
+        <div class="scope-ribbon" aria-label="Assessment privacy and safety summary">
+          <span><strong>Network</strong> Bounded requests</span>
+          <span><strong>Data</strong> Redacted reports</span>
+          <span><strong>Decision</strong> Human verification</span>
+        </div>
 
         <form id="scan-form" novalidate>
           <section class="panel step-panel" aria-labelledby="target-heading">
-            <div class="step-number" aria-hidden="true">1</div>
+            <div class="step-rail"><span>Step</span><strong>01</strong></div>
             <div class="step-content">
-              <h2 id="target-heading">Target and permission</h2>
-              <div class="field">
+              <div class="section-intro">
+                <div><p class="section-label">Set the boundary</p><h2 id="target-heading">Target and permission</h2></div>
+                <p>Start with one target you own or are explicitly allowed to assess.</p>
+              </div>
+              <div class="field target-field">
                 <label for="target-url">Target URL</label>
                 <input id="target-url" name="targetUrl" type="url" required placeholder="https://staging.example.test/" spellcheck="false" aria-describedby="target-help">
-                <small id="target-help">Use a local, lab, or staging target whenever possible. Query strings are removed from reports.</small>
+                <small id="target-help">Prefer local, lab, or staging environments. Query strings are removed from exported reports.</small>
               </div>
               <fieldset class="permission-fieldset">
                 <legend>Authorization confirmation</legend>
-                <label class="check-row" for="authorization-confirmed">
+                <label class="check-row permission-check" for="authorization-confirmed">
                   <input id="authorization-confirmed" name="authorizationConfirmed" type="checkbox" required>
-                  <span>I own this target or have explicit permission to assess it.</span>
+                  <span><strong>I am authorized to assess this target.</strong><small>I own it or have explicit permission from the owner.</small></span>
                 </label>
               </fieldset>
             </div>
           </section>
 
           <section class="panel step-panel" aria-labelledby="checks-heading">
-            <div class="step-number" aria-hidden="true">2</div>
+            <div class="step-rail"><span>Step</span><strong>02</strong></div>
             <div class="step-content">
-              <h2 id="checks-heading">Choose evidence checks</h2>
+              <div class="section-intro">
+                <div><p class="section-label">Compose the run</p><h2 id="checks-heading">Choose evidence checks</h2></div>
+                <p>Only enable scenarios for which you have safe test accounts and known resources.</p>
+              </div>
+
               <label class="check-card" for="passive-enabled">
                 <input id="passive-enabled" type="checkbox" checked>
-                <span><strong>Baseline controls</strong><small>Headers, cookies, CORS, HTTPS, framing, and advertised methods.</small></span>
+                <span class="check-card-index" aria-hidden="true">A</span>
+                <span><strong>Baseline controls</strong><small>HTTPS, security headers, cookies, CORS, framing, and advertised methods.</small></span>
+                <span class="check-card-state">Recommended</span>
               </label>
 
-              <details class="scenario">
-                <summary><span>BOLA / IDOR scenario</span><small>Two actors and two known objects</small></summary>
-                <div class="scenario-body">
-                  <label class="check-row"><input id="bola-enabled" type="checkbox"> Enable this scenario</label>
-                  <div class="field-grid three">
-                    <div class="field wide"><label for="bola-endpoint">Endpoint template</label><input id="bola-endpoint" placeholder="/api/orders/{id}" spellcheck="false"></div>
-                    <div class="field"><label for="bola-method">Method</label><select id="bola-method"><option>GET</option><option>HEAD</option></select></div>
-                    <div class="field"><label for="bola-a-id">Actor A object ID</label><input id="bola-a-id" spellcheck="false"></div>
-                    <div class="field"><label for="bola-b-id">Actor B object ID</label><input id="bola-b-id" spellcheck="false"></div>
+              <div class="scenario-list">
+                <details class="scenario">
+                  <summary><span class="scenario-index" aria-hidden="true">B</span><span class="scenario-title">BOLA / IDOR scenario<small>Two actors · two known objects</small></span><span class="scenario-action">Configure</span></summary>
+                  <div class="scenario-body">
+                    <label class="check-row"><input id="bola-enabled" type="checkbox"><span>Enable this scenario</span></label>
+                    <div class="field-grid three">
+                      <div class="field wide"><label for="bola-endpoint">Endpoint template</label><input id="bola-endpoint" placeholder="/api/orders/{id}" spellcheck="false"></div>
+                      <div class="field"><label for="bola-method">Method</label><select id="bola-method"><option>GET</option><option>HEAD</option></select></div>
+                      <div class="field"><label for="bola-a-id">Actor A object ID</label><input id="bola-a-id" spellcheck="false"></div>
+                      <div class="field"><label for="bola-b-id">Actor B object ID</label><input id="bola-b-id" spellcheck="false"></div>
+                    </div>
+                    <div class="field-grid">
+                      <div class="field"><label for="bola-a-headers">Actor A session headers</label><textarea id="bola-a-headers" rows="3" autocomplete="off" spellcheck="false" placeholder="Authorization: Bearer …"></textarea></div>
+                      <div class="field"><label for="bola-b-headers">Actor B session headers</label><textarea id="bola-b-headers" rows="3" autocomplete="off" spellcheck="false" placeholder="Cookie: session=…"></textarea></div>
+                    </div>
                   </div>
-                  <div class="field-grid">
-                    <div class="field"><label for="bola-a-headers">Actor A session headers</label><textarea id="bola-a-headers" rows="3" autocomplete="off" spellcheck="false" placeholder="Authorization: Bearer …"></textarea></div>
-                    <div class="field"><label for="bola-b-headers">Actor B session headers</label><textarea id="bola-b-headers" rows="3" autocomplete="off" spellcheck="false" placeholder="Cookie: session=…"></textarea></div>
-                  </div>
-                </div>
-              </details>
+                </details>
 
-              <details class="scenario">
-                <summary><span>BFLA scenario</span><small>Low and high privilege sessions</small></summary>
-                <div class="scenario-body">
-                  <label class="check-row"><input id="bfla-enabled" type="checkbox"> Enable this scenario</label>
-                  <div class="field-grid three">
-                    <div class="field wide"><label for="bfla-endpoint">Privileged endpoint</label><input id="bfla-endpoint" placeholder="/api/admin/reports" spellcheck="false"></div>
-                    <div class="field"><label for="bfla-method">Method</label><select id="bfla-method"><option>GET</option><option>HEAD</option></select></div>
+                <details class="scenario">
+                  <summary><span class="scenario-index" aria-hidden="true">C</span><span class="scenario-title">BFLA scenario<small>Low privilege · high privilege</small></span><span class="scenario-action">Configure</span></summary>
+                  <div class="scenario-body">
+                    <label class="check-row"><input id="bfla-enabled" type="checkbox"><span>Enable this scenario</span></label>
+                    <div class="field-grid three">
+                      <div class="field wide"><label for="bfla-endpoint">Privileged endpoint</label><input id="bfla-endpoint" placeholder="/api/admin/reports" spellcheck="false"></div>
+                      <div class="field"><label for="bfla-method">Method</label><select id="bfla-method"><option>GET</option><option>HEAD</option></select></div>
+                    </div>
+                    <div class="field-grid">
+                      <div class="field"><label for="bfla-low-headers">Low-privilege headers</label><textarea id="bfla-low-headers" rows="3" autocomplete="off" spellcheck="false"></textarea></div>
+                      <div class="field"><label for="bfla-high-headers">High-privilege headers</label><textarea id="bfla-high-headers" rows="3" autocomplete="off" spellcheck="false"></textarea></div>
+                    </div>
                   </div>
-                  <div class="field-grid">
-                    <div class="field"><label for="bfla-low-headers">Low-privilege headers</label><textarea id="bfla-low-headers" rows="3" autocomplete="off" spellcheck="false"></textarea></div>
-                    <div class="field"><label for="bfla-high-headers">High-privilege headers</label><textarea id="bfla-high-headers" rows="3" autocomplete="off" spellcheck="false"></textarea></div>
-                  </div>
-                </div>
-              </details>
+                </details>
 
-              <details class="scenario">
-                <summary><span>Enumeration scenario</span><small>Known versus unknown value</small></summary>
-                <div class="scenario-body">
-                  <label class="check-row"><input id="enum-enabled" type="checkbox"> Enable this scenario</label>
-                  <div class="field-grid three">
-                    <div class="field wide"><label for="enum-endpoint">Endpoint template</label><input id="enum-endpoint" placeholder="/api/users/{value}" spellcheck="false"></div>
-                    <div class="field"><label for="enum-method">Method</label><select id="enum-method"><option>GET</option><option>HEAD</option></select></div>
-                    <div class="field"><label for="enum-known">Known value</label><input id="enum-known" spellcheck="false"></div>
-                    <div class="field"><label for="enum-unknown">Unknown value</label><input id="enum-unknown" spellcheck="false"></div>
-                    <div class="field wide"><label for="enum-headers">Optional session headers</label><textarea id="enum-headers" rows="2" autocomplete="off" spellcheck="false"></textarea></div>
+                <details class="scenario">
+                  <summary><span class="scenario-index" aria-hidden="true">D</span><span class="scenario-title">Enumeration scenario<small>Known value · unknown value</small></span><span class="scenario-action">Configure</span></summary>
+                  <div class="scenario-body">
+                    <label class="check-row"><input id="enum-enabled" type="checkbox"><span>Enable this scenario</span></label>
+                    <div class="field-grid three">
+                      <div class="field wide"><label for="enum-endpoint">Endpoint template</label><input id="enum-endpoint" placeholder="/api/users/{value}" spellcheck="false"></div>
+                      <div class="field"><label for="enum-method">Method</label><select id="enum-method"><option>GET</option><option>HEAD</option></select></div>
+                      <div class="field"><label for="enum-known">Known value</label><input id="enum-known" spellcheck="false"></div>
+                      <div class="field"><label for="enum-unknown">Unknown value</label><input id="enum-unknown" spellcheck="false"></div>
+                      <div class="field wide"><label for="enum-headers">Session headers <span class="optional">Optional</span></label><textarea id="enum-headers" rows="2" autocomplete="off" spellcheck="false"></textarea></div>
+                    </div>
                   </div>
-                </div>
-              </details>
+                </details>
 
-              <details class="scenario">
-                <summary><span>Rate-limit observation</span><small>Maximum 10 bounded GET requests</small></summary>
-                <div class="scenario-body">
-                  <label class="check-row"><input id="rate-enabled" type="checkbox"> Enable this observation</label>
-                  <div class="field-grid three">
-                    <div class="field wide"><label for="rate-endpoint">Endpoint</label><input id="rate-endpoint" placeholder="/api/session/status" spellcheck="false"></div>
-                    <div class="field"><label for="rate-count">Request count</label><input id="rate-count" type="number" min="3" max="10" value="6"></div>
-                    <div class="field wide"><label for="rate-headers">Optional session headers</label><textarea id="rate-headers" rows="2" autocomplete="off" spellcheck="false"></textarea></div>
+                <details class="scenario">
+                  <summary><span class="scenario-index" aria-hidden="true">E</span><span class="scenario-title">Rate-limit observation<small>Maximum 10 bounded GET requests</small></span><span class="scenario-action">Configure</span></summary>
+                  <div class="scenario-body">
+                    <label class="check-row"><input id="rate-enabled" type="checkbox"><span>Enable this observation</span></label>
+                    <div class="field-grid three">
+                      <div class="field wide"><label for="rate-endpoint">Endpoint</label><input id="rate-endpoint" placeholder="/api/session/status" spellcheck="false"></div>
+                      <div class="field"><label for="rate-count">Request count</label><input id="rate-count" type="number" min="3" max="10" value="6"></div>
+                      <div class="field wide"><label for="rate-headers">Session headers <span class="optional">Optional</span></label><textarea id="rate-headers" rows="2" autocomplete="off" spellcheck="false"></textarea></div>
+                    </div>
                   </div>
-                </div>
-              </details>
+                </details>
+              </div>
             </div>
           </section>
 
-          <section class="panel step-panel" aria-labelledby="run-heading">
-            <div class="step-number" aria-hidden="true">3</div>
+          <section class="panel step-panel launch-panel" aria-labelledby="run-heading">
+            <div class="step-rail"><span>Step</span><strong>03</strong></div>
             <div class="step-content">
-              <h2 id="run-heading">Run and review</h2>
-              <p class="boundary-note">No crawling, brute force, browser payload, or state-changing request will be sent.</p>
+              <div class="section-intro">
+                <div><p class="section-label">Controlled execution</p><h2 id="run-heading">Run and review</h2></div>
+                <p>The app records evidence. You decide what the evidence means.</p>
+              </div>
+              <p class="boundary-note"><strong>Request boundary</strong><span>No crawling, brute force, browser payload, or state-changing request will be sent.</span></p>
               <div class="action-row">
-                <button id="scan-start" class="button primary" type="submit">Start assessment</button>
+                <button id="scan-start" class="button primary" type="submit">Start assessment <span aria-hidden="true">→</span></button>
                 <button id="scan-cancel" class="button secondary" type="button" hidden>Cancel</button>
                 <button id="scan-export" class="button secondary" type="button" hidden>Export redacted JSON</button>
               </div>
-              <div id="scan-status" class="status-line" role="status" aria-live="polite">Ready. No network request has been sent.</div>
+              <div id="scan-status" class="status-line" role="status" aria-live="polite"><span aria-hidden="true"></span>Ready. No network request has been sent.</div>
             </div>
           </section>
         </form>
@@ -138,33 +181,46 @@
       </section>
 
       <section class="view" data-panel="bcrypt" aria-labelledby="bcrypt-title" hidden>
-        <header class="page-header"><p class="eyebrow">LOCAL CPU MEASUREMENT</p><h2 id="bcrypt-title">Bcrypt calibration</h2><p>Measure sequential hashing latency on this machine using a synthetic benchmark value.</p></header>
+        <header class="page-header">
+          <div class="page-heading"><p class="eyebrow"><span>02</span> Local CPU measurement</p><h2 id="bcrypt-title">Tune for reality,<br>not guesswork.</h2><p>Measure native bcrypt latency on this machine with a synthetic value, then choose the highest cost that fits your target.</p></div>
+          <div class="context-stamp"><span>Benchmark mode</span><strong>Sequential</strong><small>No real passwords</small></div>
+        </header>
         <div id="system-strip" class="system-strip" aria-label="Local system information">Loading system details…</div>
-        <form id="bcrypt-form" class="panel" novalidate>
+        <form id="bcrypt-form" class="panel benchmark-panel" novalidate>
+          <div class="section-intro benchmark-intro"><div><p class="section-label">Measurement plan</p><h2>Cost range and latency target</h2></div><p>Higher costs increase work exponentially. Start narrow and measure on production-like hardware.</p></div>
           <div class="field-grid four">
             <div class="field"><label for="bcrypt-min">Minimum cost</label><input id="bcrypt-min" type="number" min="8" max="16" value="10"></div>
             <div class="field"><label for="bcrypt-max">Maximum cost</label><input id="bcrypt-max" type="number" min="8" max="16" value="13"></div>
             <div class="field"><label for="bcrypt-samples">Samples per cost</label><input id="bcrypt-samples" type="number" min="3" max="10" value="5"></div>
-            <div class="field"><label for="bcrypt-target">Target p95 (ms)</label><input id="bcrypt-target" type="number" min="50" max="1000" value="250"></div>
+            <div class="field"><label for="bcrypt-target">Target p95 <span class="unit">ms</span></label><input id="bcrypt-target" type="number" min="50" max="1000" value="250"></div>
           </div>
-          <p class="boundary-note">Higher costs may saturate one CPU core for several minutes. Bcrypt is a legacy-compatible choice; prefer Argon2id for new systems.</p>
+          <p class="boundary-note"><strong>Compute boundary</strong><span>Uses one local CPU path and a synthetic benchmark value. It does not estimate concurrent server capacity.</span></p>
           <div class="action-row">
-            <button id="bcrypt-start" class="button primary" type="submit">Run benchmark</button>
+            <button id="bcrypt-start" class="button primary" type="submit">Run benchmark <span aria-hidden="true">→</span></button>
             <button id="bcrypt-cancel" class="button secondary" type="button" hidden>Cancel</button>
             <button id="bcrypt-export" class="button secondary" type="button" hidden>Export JSON</button>
           </div>
-          <div id="bcrypt-status" class="status-line" role="status" aria-live="polite">Ready.</div>
+          <div id="bcrypt-status" class="status-line" role="status" aria-live="polite"><span aria-hidden="true"></span>Ready.</div>
         </form>
         <section id="bcrypt-results" class="results" aria-live="polite" aria-label="Bcrypt benchmark results"></section>
       </section>
 
       <section class="view" data-panel="guardrails" aria-labelledby="guardrails-title" hidden>
-        <header class="page-header"><p class="eyebrow">WHAT THIS APP CAN PROVE</p><h2 id="guardrails-title">Scope and guardrails</h2><p>Use the tool as structured evidence collection, followed by human review and server-side remediation.</p></header>
-        <div class="panel prose-grid">
-          <section><h2>Built in</h2><ul><li>Read-only GET, HEAD, and OPTIONS requests</li><li>Same-origin redirects only</li><li>8-second timeout and 256 KB response cap</li><li>Bounded request counts and cancellation</li><li>Tokens and cookies excluded from reports</li></ul></section>
-          <section><h2>Not built in</h2><ul><li>No endpoint brute force or unrestricted crawler</li><li>No password attack or credential spraying</li><li>No XSS payload execution</li><li>No POST, PUT, PATCH, or DELETE request</li><li>No claim that a site is vulnerability-free</li></ul></section>
+        <header class="page-header">
+          <div class="page-heading"><p class="eyebrow"><span>03</span> Evidence boundaries</p><h2 id="guardrails-title">Know what the tool<br>can actually prove.</h2><p>Use Bcrypt Guard for structured evidence collection, followed by human review and server-side remediation.</p></div>
+          <div class="context-stamp"><span>Default posture</span><strong>Deny scope creep</strong><small>Explicit checks only</small></div>
+        </header>
+        <div class="guardrail-grid">
+          <section class="guardrail-column included" aria-labelledby="included-title">
+            <div class="guardrail-heading"><span aria-hidden="true">+</span><div><p class="section-label">Inside the boundary</p><h2 id="included-title">Built in</h2></div></div>
+            <ol><li><span>01</span>Read-only GET, HEAD, and OPTIONS requests</li><li><span>02</span>Same-origin redirects only</li><li><span>03</span>Eight-second timeout and 256 KB response cap</li><li><span>04</span>Bounded request counts with cancellation</li><li><span>05</span>Tokens and cookies excluded from reports</li></ol>
+          </section>
+          <section class="guardrail-column excluded" aria-labelledby="excluded-title">
+            <div class="guardrail-heading"><span aria-hidden="true">−</span><div><p class="section-label">Outside the boundary</p><h2 id="excluded-title">Not built in</h2></div></div>
+            <ol><li><span>01</span>No endpoint brute force or unrestricted crawler</li><li><span>02</span>No password attack or credential spraying</li><li><span>03</span>No browser payload execution</li><li><span>04</span>No POST, PUT, PATCH, or DELETE request</li><li><span>05</span>No claim that a site is vulnerability-free</li></ol>
+          </section>
         </div>
-        <div class="callout"><strong>Interpretation matters.</strong> A similar 2xx response can indicate broken authorization, but it can also be a public or intentionally shared resource. Verify policy and business context before reporting a vulnerability.</div>
+        <div class="callout interpretation-callout"><span class="callout-mark" aria-hidden="true">!</span><div><strong>Interpretation still matters.</strong><p>A similar 2xx response can indicate broken authorization, but it can also describe a public or intentionally shared resource. Verify policy and business context before reporting a vulnerability.</p></div></div>
       </section>
     </main>
   </div>

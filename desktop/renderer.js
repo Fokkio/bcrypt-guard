@@ -9,7 +9,9 @@ function byId(id) { return document.getElementById(id); }
 
 function setStatus(id, message, error = false) {
   const status = byId(id);
-  status.textContent = message;
+  const marker = document.createElement('span');
+  marker.setAttribute('aria-hidden', 'true');
+  status.replaceChildren(marker, document.createTextNode(message));
   status.classList.toggle('is-error', error);
 }
 
@@ -26,12 +28,18 @@ function setupNavigation() {
   for (const button of document.querySelectorAll('[data-view]')) {
     button.addEventListener('click', () => {
       const selected = button.dataset.view;
-      document.querySelectorAll('[data-view]').forEach((item) => item.classList.toggle('is-active', item === button));
+      document.querySelectorAll('[data-view]').forEach((item) => {
+        const active = item === button;
+        item.classList.toggle('is-active', active);
+        if (active) item.setAttribute('aria-current', 'page');
+        else item.removeAttribute('aria-current');
+      });
       document.querySelectorAll('[data-panel]').forEach((panel) => { panel.hidden = panel.dataset.panel !== selected; });
-      const heading = document.querySelector(`[data-panel="${selected}"] .page-header > h1, [data-panel="${selected}"] .page-header > h2`);
+      const heading = document.querySelector(`[data-panel="${selected}"] .page-header h1, [data-panel="${selected}"] .page-header h2`);
       heading?.setAttribute('tabindex', '-1');
       heading?.focus();
-      document.title = `${heading?.textContent || 'Bcrypt Guard'} · Bcrypt Guard Desktop`;
+      const headingText = heading?.textContent?.replace(/\s+/g, ' ').trim() || 'Bcrypt Guard';
+      document.title = `${headingText} · Bcrypt Guard Desktop`;
     });
   }
 }

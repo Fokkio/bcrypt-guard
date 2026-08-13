@@ -37,8 +37,9 @@ function contrast(foreground, background) {
 }
 
 for (const [foreground, background, label] of [
-  ['#17212b', '#f4f1ea', 'primary text'], ['#56616c', '#f4f1ea', 'muted text'],
-  ['#ffffff', '#17212b', 'sidebar text'], ['#ffffff', '#b44924', 'primary button'],
+  ['#17201c', '#eef0ea', 'primary text'], ['#536058', '#eef0ea', 'muted text'],
+  ['#ffffff', '#101713', 'sidebar text'], ['#ffffff', '#173f32', 'primary button'],
+  ['#21300c', '#c9f05d', 'signal text'], ['#aeb8af', '#101713', 'sidebar muted text'],
 ]) {
   const ratio = contrast(foreground, background);
   if (ratio < 4.5) failures.push(`${label} contrast is ${ratio.toFixed(2)}:1`);
