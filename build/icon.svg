@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-labelledby="title description">
+  <title id="title">Bcrypt Guard application icon</title>
+  <desc id="description">A geometric BG monogram in dark mineral green and signal lime.</desc>
+  <rect width="1024" height="1024" rx="176" fill="#101713"/>
+  <rect x="162" y="162" width="700" height="700" rx="32" fill="none" stroke="#8b978e" stroke-width="18"/>
+  <path d="M162 194a32 32 0 0 1 32-32h318v700H194a32 32 0 0 1-32-32z" fill="#c9f05d"/>
+  <path d="M512 162h318a32 32 0 0 1 32 32v636a32 32 0 0 1-32 32H512z" fill="#17201c"/>
+  <path d="M298 326h105c76 0 126 39 126 101 0 36-18 65-50 82 42 14 65 48 65 91 0 70-53 111-139 111H298zm98 151c39 0 59-15 59-43 0-27-20-41-59-41h-24v84zm8 167c43 0 65-17 65-49 0-31-22-48-65-48h-32v97z" fill="#21300c"/>
+  <path d="M757 455c-18-37-50-57-91-57-68 0-112 47-112 116 0 72 46 118 115 118 43 0 77-20 92-54h-101v-66h185v33c0 100-68 174-178 174-113 0-191-83-191-204 0-120 79-204 191-204 82 0 148 42 178 115z" fill="#f4f7ef"/>
+</svg>
