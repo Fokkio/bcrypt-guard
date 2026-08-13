@@ -1,4 +1,7 @@
 node_modules/
+release/
+artifacts/
+.cache/
 .env
 npm-debug.log
 .DS_Store

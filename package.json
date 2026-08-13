@@ -1,17 +1,67 @@
 {
-  "name": "bcrypt-guard-calibrator",
-  "version": "1.0.0",
-  "description": "Bcrypt-Guard Adaptive Calibrator — Benchmark & Cost Recommendation Engine",
-  "main": "src/server.js",
+  "name": "bcrypt-guard-desktop",
+  "version": "2.0.0",
+  "description": "Authorized web security assessment and bcrypt calibration desktop app",
+  "main": "electron/main.js",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "node --watch src/server.js"
+    "start": "electron .",
+    "smoke": "node scripts/smoke-electron.js",
+    "capture:ui": "electron scripts/capture-main.js",
+    "test": "node --test --test-concurrency=1",
+    "check": "node scripts/check.js",
+    "build:win": "electron-builder --win nsis portable --x64 --publish never",
+    "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
-    "bcrypt": "^5.1.1",
-    "dotenv": "^17.4.2",
-    "express": "^4.21.0",
-    "express-rate-limit": "^8.5.2",
-    "helmet": "^8.2.0"
+    "bcrypt": "^6.0.0"
+  },
+  "devDependencies": {
+    "electron": "43.4.0",
+    "electron-builder": "26.15.3"
+  },
+  "build": {
+    "appId": "com.fokkio.bcryptguard.desktop",
+    "productName": "Bcrypt Guard Desktop",
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/bcrypt/**/*"
+    ],
+    "electronFuses": {
+      "runAsNode": false,
+      "enableCookieEncryption": true,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true,
+      "grantFileProtocolExtraPrivileges": false
+    },
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "desktop/**/*",
+      "electron/**/*",
+      "src/bcrypt/**/*",
+      "src/scanners/**/*",
+      "src/security/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "artifactName": "Bcrypt-Guard-Desktop-Setup-${version}-${arch}.${ext}"
+    },
+    "portable": {
+      "artifactName": "Bcrypt-Guard-Desktop-Portable-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "deleteAppDataOnUninstall": false
+    }
   }
 }

@@ -1,0 +1,70 @@
+name: Windows desktop build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - codex/desktop-security-studio
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-desktop-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-windows:
+    name: Test and build Windows x64
+    runs-on: windows-latest
+    timeout-minutes: 25
+    env:
+      ELECTRON_BUILDER_CACHE: ${{ github.workspace }}\.cache\electron-builder
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Run syntax and project checks
+        run: npm run check
+
+      - name: Run unit and fixture integration tests
+        run: npm test
+
+      - name: Smoke-test isolated Electron renderer
+        run: npm run smoke
+
+      - name: Build NSIS and portable executables
+        run: npm run build:win
+
+      - name: Create SHA-256 checksums
+        shell: pwsh
+        run: |
+          Get-ChildItem -LiteralPath release -Filter *.exe |
+            Get-FileHash -Algorithm SHA256 |
+            ForEach-Object { "$($_.Hash)  $(Split-Path -Leaf $_.Path)" } |
+            Set-Content -LiteralPath release\SHA256SUMS.txt -Encoding ascii
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: bcrypt-guard-desktop-windows-x64
+          path: |
+            release/*.exe
+            release/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14
