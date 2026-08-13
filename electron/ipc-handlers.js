@@ -4,11 +4,9 @@ const os = require('node:os');
 const path = require('node:path');
 const { benchmarkBcrypt } = require('../src/bcrypt/benchmark');
 const { runScan } = require('../src/scanners/scan-service');
+const { cleanReport } = require('../src/security/report');
 
-let activeScan = null;
-let activeBenchmark = null;
-let lastScanReport = null;
-let lastBenchmarkReport = null;
+const activeOperations = new Map();
 
 function validSender(event, allowedOrigin) {
   const frameUrl = event.senderFrame?.url || '';
@@ -45,47 +43,47 @@ function registerIpcHandlers({ allowedOrigin }) {
   });
   ipcMain.handle('scan:start', async (event, config) => {
     validSender(event, allowedOrigin);
-    if (activeScan) throw new Error('A scan is already running');
-    activeScan = new AbortController();
+    if (activeOperations.has('scan')) throw new Error('A scan is already running');
+    const controller = new AbortController();
+    activeOperations.set('scan', controller);
     try {
-      lastScanReport = await runScan(config, {
-        signal: activeScan.signal,
+      return await runScan(config, {
+        signal: controller.signal,
         onProgress: (progress) => event.sender.send('scan:progress', progress),
       });
-      return lastScanReport;
     } finally {
-      activeScan = null;
+      activeOperations.delete('scan');
     }
   });
   ipcMain.handle('scan:cancel', (event) => {
     validSender(event, allowedOrigin);
-    activeScan?.abort();
-    return { cancelled: Boolean(activeScan) };
+    const controller = activeOperations.get('scan');
+    controller?.abort();
+    return { cancelled: Boolean(controller) };
   });
   ipcMain.handle('bcrypt:start', async (event, config) => {
     validSender(event, allowedOrigin);
-    if (activeBenchmark) throw new Error('A bcrypt benchmark is already running');
-    activeBenchmark = new AbortController();
+    if (activeOperations.has('bcrypt')) throw new Error('A bcrypt benchmark is already running');
+    const controller = new AbortController();
+    activeOperations.set('bcrypt', controller);
     try {
-      lastBenchmarkReport = await benchmarkBcrypt(config, {
-        signal: activeBenchmark.signal,
+      return await benchmarkBcrypt(config, {
+        signal: controller.signal,
         onProgress: (progress) => event.sender.send('bcrypt:progress', progress),
       });
-      return lastBenchmarkReport;
     } finally {
-      activeBenchmark = null;
+      activeOperations.delete('bcrypt');
     }
   });
   ipcMain.handle('bcrypt:cancel', (event) => {
     validSender(event, allowedOrigin);
-    activeBenchmark?.abort();
-    return { cancelled: Boolean(activeBenchmark) };
+    const controller = activeOperations.get('bcrypt');
+    controller?.abort();
+    return { cancelled: Boolean(controller) };
   });
   ipcMain.handle('report:export', async (event, payload) => {
     validSender(event, allowedOrigin);
-    const reports = { scan: lastScanReport, bcrypt: lastBenchmarkReport };
-    const report = reports[payload?.reportType];
-    if (!report) throw new Error('No trusted report is available for export');
+    const report = cleanReport(payload?.reportType, payload?.report);
     const serialized = JSON.stringify(report, null, 2);
     if (serialized.length > 1024 * 1024) throw new Error('Report exceeds the 1 MB export limit');
     const result = await dialog.showSaveDialog({

@@ -19,9 +19,9 @@ test('preload does not expose raw ipc primitives', () => {
   assert.match(preload, /contextBridge\.exposeInMainWorld/);
 });
 
-test('renderer can export only main-owned report types', () => {
+test('main validates export reports against explicit schemas', () => {
   const handlers = fs.readFileSync('electron/ipc-handlers.js', 'utf8');
-  assert.match(handlers, /reports\[payload\?\.reportType\]/);
+  assert.match(handlers, /cleanReport\(payload\?\.reportType, payload\?\.report\)/);
   assert.doesNotMatch(handlers, /JSON\.stringify\(payload\?\.report/);
 });
 
