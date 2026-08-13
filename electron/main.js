@@ -38,8 +38,8 @@ function createWindow() {
   const window = new BrowserWindow({
     width: 1240,
     height: 820,
-    minWidth: 860,
-    minHeight: 640,
+    minWidth: 640,
+    minHeight: 580,
     show: false,
     backgroundColor: '#f4f1ea',
     title: 'Bcrypt Guard Desktop',
@@ -60,8 +60,8 @@ function createWindow() {
   window.once('ready-to-show', () => { if (!SMOKE_TEST) window.show(); });
   if (SMOKE_TEST) {
     window.webContents.once('did-finish-load', async () => {
-      const result = await window.webContents.executeJavaScript(`({ title: document.title, bridge: typeof window.bcryptGuard })`);
-      if (result.title !== 'Bcrypt Guard Desktop' || result.bridge !== 'object') {
+      const result = await window.webContents.executeJavaScript(`(async () => ({ title: document.title, bridge: typeof window.bcryptGuard, info: await window.bcryptGuard.appInfo() }))()`);
+      if (result.title !== 'Bcrypt Guard Desktop' || result.bridge !== 'object' || !result.info?.version) {
         console.error('SMOKE_FAILED', JSON.stringify(result));
         app.exit(1);
         return;

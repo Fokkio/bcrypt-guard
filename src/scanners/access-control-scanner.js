@@ -7,6 +7,9 @@ function isAllowed(response) {
 
 async function runBola(context, scenario) {
   if (!scenario.enabled) return [];
+  if (typeof scenario.endpoint !== 'string' || !scenario.endpoint.includes('{id}')) {
+    throw new Error('BOLA endpoint must contain the {id} placeholder');
+  }
   const method = validateMethod(scenario.method || 'GET');
   const actorAHeaders = parseHeaderLines(scenario.actorAHeaders);
   const actorBHeaders = parseHeaderLines(scenario.actorBHeaders);

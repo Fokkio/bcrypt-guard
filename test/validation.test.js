@@ -1,6 +1,8 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const { endpointUrl, parseHeaderLines, validateMethod, validateScanConfig } = require('../src/security/validation');
+const { runEnumerationScanner } = require('../src/scanners/enumeration-scanner');
+const { runBola } = require('../src/scanners/access-control-scanner');
 
 test('scan requires explicit authorization', () => {
   assert.throws(() => validateScanConfig({ targetUrl: 'https://example.test' }), /confirm/i);
@@ -22,4 +24,12 @@ test('scenario endpoints cannot leave the target origin', () => {
   const base = new URL('https://example.test/app');
   assert.equal(endpointUrl(base, '/api/orders/{id}', { id: 'a/b' }).pathname, '/api/orders/a%2Fb');
   assert.throws(() => endpointUrl(base, 'https://other.test/api'), /origin/i);
+});
+
+test('enumeration requires an explicit value placeholder', async () => {
+  await assert.rejects(() => runEnumerationScanner({}, { enabled: true, endpoint: '/api/users/fixed' }), /\{value\}/);
+});
+
+test('BOLA requires an explicit object placeholder', async () => {
+  await assert.rejects(() => runBola({}, { enabled: true, endpoint: '/api/orders/fixed' }), /\{id\}/);
 });

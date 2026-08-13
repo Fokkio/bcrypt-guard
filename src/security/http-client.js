@@ -48,6 +48,7 @@ class SafeHttpClient {
     const controller = new AbortController();
     const cancel = () => controller.abort(input.signal?.reason || new Error('Scan cancelled'));
     input.signal?.addEventListener('abort', cancel, { once: true });
+    if (input.signal?.aborted) cancel();
     const timeout = setTimeout(() => controller.abort(new Error('Request timed out')), this.timeoutMs);
 
     try {

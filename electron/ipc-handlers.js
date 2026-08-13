@@ -7,10 +7,22 @@ const { runScan } = require('../src/scanners/scan-service');
 
 let activeScan = null;
 let activeBenchmark = null;
+let lastScanReport = null;
+let lastBenchmarkReport = null;
 
 function validSender(event, allowedOrigin) {
   const frameUrl = event.senderFrame?.url || '';
-  if (!frameUrl.startsWith(allowedOrigin)) throw new Error('Untrusted IPC sender');
+  let trusted = false;
+  try {
+    const url = new URL(frameUrl);
+    if (allowedOrigin === 'file://') {
+      trusted = url.protocol === 'file:';
+    } else {
+      const expected = new URL(allowedOrigin);
+      trusted = url.protocol === expected.protocol && url.host === expected.host;
+    }
+  } catch { /* Invalid sender URL remains untrusted. */ }
+  if (!trusted) throw new Error('Untrusted IPC sender');
 }
 
 function safeFileName(value) {
@@ -36,10 +48,11 @@ function registerIpcHandlers({ allowedOrigin }) {
     if (activeScan) throw new Error('A scan is already running');
     activeScan = new AbortController();
     try {
-      return await runScan(config, {
+      lastScanReport = await runScan(config, {
         signal: activeScan.signal,
         onProgress: (progress) => event.sender.send('scan:progress', progress),
       });
+      return lastScanReport;
     } finally {
       activeScan = null;
     }
@@ -54,10 +67,11 @@ function registerIpcHandlers({ allowedOrigin }) {
     if (activeBenchmark) throw new Error('A bcrypt benchmark is already running');
     activeBenchmark = new AbortController();
     try {
-      return await benchmarkBcrypt(config, {
+      lastBenchmarkReport = await benchmarkBcrypt(config, {
         signal: activeBenchmark.signal,
         onProgress: (progress) => event.sender.send('bcrypt:progress', progress),
       });
+      return lastBenchmarkReport;
     } finally {
       activeBenchmark = null;
     }
@@ -69,7 +83,10 @@ function registerIpcHandlers({ allowedOrigin }) {
   });
   ipcMain.handle('report:export', async (event, payload) => {
     validSender(event, allowedOrigin);
-    const serialized = JSON.stringify(payload?.report, null, 2);
+    const reports = { scan: lastScanReport, bcrypt: lastBenchmarkReport };
+    const report = reports[payload?.reportType];
+    if (!report) throw new Error('No trusted report is available for export');
+    const serialized = JSON.stringify(report, null, 2);
     if (serialized.length > 1024 * 1024) throw new Error('Report exceeds the 1 MB export limit');
     const result = await dialog.showSaveDialog({
       title: 'Export redacted assessment report',

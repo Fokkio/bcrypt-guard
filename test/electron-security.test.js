@@ -19,6 +19,12 @@ test('preload does not expose raw ipc primitives', () => {
   assert.match(preload, /contextBridge\.exposeInMainWorld/);
 });
 
+test('renderer can export only main-owned report types', () => {
+  const handlers = fs.readFileSync('electron/ipc-handlers.js', 'utf8');
+  assert.match(handlers, /reports\[payload\?\.reportType\]/);
+  assert.doesNotMatch(handlers, /JSON\.stringify\(payload\?\.report/);
+});
+
 test('desktop page has restrictive CSP and an accessible skip link', () => {
   assert.match(html, /Content-Security-Policy/);
   assert.match(html, /connect-src 'none'/);

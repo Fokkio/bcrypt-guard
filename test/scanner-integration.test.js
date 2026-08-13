@@ -1,6 +1,8 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const { runScan } = require('../src/scanners/scan-service');
+const { runRateLimitScanner } = require('../src/scanners/rate-limit-scanner');
+const { SafeHttpClient } = require('../src/security/http-client');
 const { createFixtureServer } = require('./fixture-server');
 
 test('bounded fixture scan finds the intended authorization and policy signals', async (t) => {
@@ -40,4 +42,16 @@ test('bounded fixture scan finds the intended authorization and policy signals',
     assert.equal(exported.includes(secret), false);
   }
   assert.equal(fixture.requestCounts.get('/api/status'), 4);
+});
+
+test('rate-limit observation reports evidence when throttling is present', async (t) => {
+  const fixture = createFixtureServer();
+  const baseUrl = await fixture.start();
+  t.after(() => fixture.stop());
+  const findings = await runRateLimitScanner({
+    baseUrl: new URL(baseUrl), client: new SafeHttpClient(), signal: undefined,
+  }, { enabled: true, endpoint: '/api/limited', requestCount: 4, headers: '' });
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0].status, 'observed');
+  assert.match(findings[0].evidence, /429/);
 });

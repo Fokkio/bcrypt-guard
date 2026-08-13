@@ -13,7 +13,14 @@ async function runRateLimitScanner(context, scenario) {
     statuses.push(response.status);
     rateHeadersObserved ||= Object.keys(response.headers).some((name) => /^(rate.?limit|retry-after)/i.test(name));
   }
-  if (statuses.includes(429) || rateHeadersObserved) return [];
+  if (statuses.includes(429) || rateHeadersObserved) {
+    return [finding({
+      id: 'rate-limit-evidence', category: 'Rate limiting', title: 'Rate-limit evidence was observed in the safe sample',
+      severity: 'info', status: 'observed', confidence: statuses.includes(429) ? 'high' : 'medium', endpoint: endpoint.pathname,
+      evidence: `${count} bounded GET requests produced ${statuses.filter((status) => status === 429).length} HTTP 429 response(s); rate-limit header observed: ${rateHeadersObserved}.`,
+      remediation: 'Confirm the threshold, scope, retry behavior, and monitoring against the documented abuse-control policy.',
+    })];
+  }
   return [finding({
     id: 'rate-limit-observation', category: 'Rate limiting', title: 'Rate-limit evidence was not observed in the safe sample',
     severity: 'info', status: 'needs-verification', confidence: 'low', endpoint: endpoint.pathname,

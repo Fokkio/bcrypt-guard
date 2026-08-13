@@ -1,6 +1,11 @@
 const crypto = require('node:crypto');
 
 const VOLATILE_KEYS = /^(date|time|timestamp|request.?id|trace.?id|nonce|csrf|token)$/i;
+const ALLOWED_VALUES = {
+  severity: new Set(['high', 'medium', 'low', 'info']),
+  status: new Set(['observed', 'suspected', 'needs-verification']),
+  confidence: new Set(['high', 'medium', 'low']),
+};
 
 function hash(value) {
   return crypto.createHash('sha256').update(value).digest('hex').slice(0, 16);
@@ -53,6 +58,9 @@ function similarity(left, right) {
 }
 
 function finding(input) {
+  for (const [field, allowed] of Object.entries(ALLOWED_VALUES)) {
+    if (!allowed.has(input[field])) throw new Error(`Invalid finding ${field}`);
+  }
   return {
     id: input.id,
     category: input.category,

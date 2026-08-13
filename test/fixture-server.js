@@ -40,6 +40,12 @@ function createFixtureServer() {
       return json(response, 404, { error: 'account not found' });
     }
     if (url.pathname === '/api/status') return json(response, 200, { ok: true });
+    if (url.pathname === '/api/limited') {
+      const count = requestCounts.get(url.pathname);
+      return count > 2
+        ? json(response, 429, { error: 'slow down' }, { 'retry-after': '30' })
+        : json(response, 200, { ok: true }, { 'ratelimit-limit': '2' });
+    }
     return json(response, 404, { error: 'not found' });
   });
 

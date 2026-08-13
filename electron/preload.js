@@ -16,5 +16,5 @@ contextBridge.exposeInMainWorld('bcryptGuard', Object.freeze({
   startBenchmark: (config) => ipcRenderer.invoke('bcrypt:start', config),
   cancelBenchmark: () => ipcRenderer.invoke('bcrypt:cancel'),
   onBenchmarkProgress: (callback) => progressListener('bcrypt:progress', callback),
-  exportReport: (report, suggestedName) => ipcRenderer.invoke('report:export', { report, suggestedName }),
+  exportReport: (reportType, suggestedName) => ipcRenderer.invoke('report:export', { reportType, suggestedName }),
 }));

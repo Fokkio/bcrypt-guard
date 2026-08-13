@@ -19,6 +19,9 @@ async function sample(context, scenario, value) {
 
 async function runEnumerationScanner(context, scenario) {
   if (!scenario.enabled) return [];
+  if (typeof scenario.endpoint !== 'string' || !scenario.endpoint.includes('{value}')) {
+    throw new Error('Enumeration endpoint must contain the {value} placeholder');
+  }
   const known = await sample(context, scenario, scenario.knownValue);
   const unknown = await sample(context, scenario, scenario.unknownValue);
   const knownProfile = bodyProfile(known[0]);

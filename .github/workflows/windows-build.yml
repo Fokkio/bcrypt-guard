@@ -42,6 +42,9 @@ jobs:
       - name: Run syntax and project checks
         run: npm run check
 
+      - name: Run accessibility gate
+        run: npm run a11y
+
       - name: Run unit and fixture integration tests
         run: npm test
 
